@@ -1,0 +1,43 @@
+name: Receive English docs (manual recovery)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: manual-docs-sync
+  cancel-in-progress: false
+jobs:
+  receive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Xenotech-Studio/flops-agent
+          ref: master
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: target
+      - name: Receive current English docs
+        shell: bash
+        run: |
+          bash source/scripts/mirror-docs.sh "$PWD/source" "$PWD/target"
+          source_sha=$(git -C source rev-parse HEAD)
+          cd target
+          git add -A -- docs/en
+          if git diff --cached --quiet; then
+            echo "English mirror unchanged; no commit."
+            exit 0
+          fi
+          git config user.name 'flops-agent-docs-sync[bot]'
+          git config user.email 'flops-agent-docs-sync[bot]@users.noreply.github.com'
+          git commit -m "chore(sync): mirror docs from Xenotech-Studio/flops-agent@$source_sha"
+          git push origin HEAD:main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # GITHUB_TOKEN pushes do not trigger another workflow, so validate here too.
+      - run: npm ci && npm run build
+        working-directory: target/website

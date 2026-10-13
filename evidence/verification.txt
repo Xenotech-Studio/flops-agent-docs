@@ -1,0 +1,10 @@
+Simulated tracked source docs/README.md edit → docs/en/README.md updated: PASS
+>fcsT...... README.md
+Second sync: zero output, identical hashes; no diff to commit: PASS
+Stale mirror file removed; zh-CN and website untouched: PASS
+*deleting   stale-test.md
+Restored real source mirror: 26 files byte-identical; source docs never edited: PASS
+English generated Markdown, metadata and docs-index.json match original generator byte-for-byte: PASS
+Optional zh-CN input generates internal content without changing English index: PASS
+Missing zh-CN input skips generation and removes stale staged translations: PASS
+All 36 tracked website files migrated; only adapted files: website/scripts/docs-transforms.test.mjs, website/scripts/sync-docs.mjs

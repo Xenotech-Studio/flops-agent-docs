@@ -1,0 +1,8 @@
+node_modules/
+website/dist/
+website/src/content/docs/
+website/src/content/i18n/
+website/public/docs-source/
+website/public/docs-index.json
+*.tsbuildinfo
+__pycache__/

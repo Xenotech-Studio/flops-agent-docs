@@ -1,0 +1,28 @@
+
+> flops-agent-website@0.1.0 prebuild
+> npm run docs:sync
+
+
+> flops-agent-website@0.1.0 docs:sync
+> node scripts/sync-docs.mjs
+
+Synced 17 pages from local docs; explicit publication manifest only.
+Staged 0 zh-CN pages for future localized routing (not published).
+
+> flops-agent-website@0.1.0 build
+> tsc -b && vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 40 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   3.86 kB │ gzip:   1.16 kB
+dist/assets/index-C62ZKwuX.css   29.63 kB │ gzip:   6.74 kB
+dist/assets/index-CQtSzWgV.js   521.53 kB │ gzip: 120.10 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.35s

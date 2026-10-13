@@ -1,0 +1,10 @@
+name: Translation placeholder
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Translation is not implemented. Next round adds 17 zh-CN pages and localized routing.'

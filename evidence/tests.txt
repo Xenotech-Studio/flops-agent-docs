@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: remove section, all children and its trailing reference; preserve released text
+ok 1 - remove section, all children and its trailing reference; preserve released text
+  ---
+  duration_ms: 7.148172
+  ...
+# Subtest: ignore fenced headings, stop at higher heading, support multiple selections and EOF
+ok 2 - ignore fenced headings, stop at higher heading, support multiple selections and EOF
+  ---
+  duration_ms: 0.557913
+  ...
+# Subtest: fail closed on missing selector or invalid configuration
+ok 3 - fail closed on missing selector or invalid configuration
+  ---
+  duration_ms: 0.5564
+  ...
+# Subtest: escape raw HTML and reject unsafe links
+ok 4 - escape raw HTML and reject unsafe links
+  ---
+  duration_ms: 2.963472
+  ...
+# Subtest: legacy escaped fences are code, not headings; source stays unchanged
+ok 5 - legacy escaped fences are code, not headings; source stays unchanged
+  ---
+  duration_ms: 1.610468
+  ...
+# Subtest: heading IDs, numbered lists, tables and reference links
+ok 6 - heading IDs, numbered lists, tables and reference links
+  ---
+  duration_ms: 0.823283
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 75.470957
