@@ -5,6 +5,7 @@ import { renderMarkdown } from './markdown.mjs';
 import { dropSections } from './docs-transforms.mjs';
 const website = fileURLToPath(new URL('../', import.meta.url));
 const override = process.env.FLOPS_AGENT_DOCS_DIR;
+const strictStructure = process.env.DOCS_STRICT_STRUCTURE !== '0';
 if (override !== undefined && !isAbsolute(override)) throw new Error('FLOPS_AGENT_DOCS_DIR must be an absolute path');
 const sourceDir = override ?? fileURLToPath(new URL('../../docs/en/', import.meta.url));
 const zhSourceDir = fileURLToPath(new URL('../../docs/zh-CN/', import.meta.url));
@@ -69,10 +70,15 @@ return (await Promise.all(sources.map(async (entry, order) => {
   if (lang === 'zh-CN') {
     const english = dropSections(await readFile(join(sourceDir, entry.file), 'utf8'), entry.drop_sections);
     const originalHeadings = renderMarkdown(english).headings;
-    if (originalHeadings.length !== headings.length) throw new Error(`${entry.file}: translation heading count differs`);
+    if (originalHeadings.length !== headings.length) {
+      if (strictStructure) throw new Error(`${entry.file}: translation heading count differs`);
+      console.warn(`warn: ${entry.file}: translation heading count differs (en=${originalHeadings.length}, zh-CN=${headings.length}) — relaxed mode`);
+    }
     const used = new Set(headings.map(h => h.id));
     for (const [index, original] of originalHeadings.entries()) {
       const translated = headings[index];
+      // A shorter translation has no positional target for this alias in relaxed mode.
+      if (!translated) continue;
       const aliases = [original.id, ...Object.entries(entry.heading_aliases ?? {}).filter(([, target]) => target === original.text).map(([id]) => id)];
       for (const id of aliases) if (!used.has(id)) {
         html = html.replace(`<h${translated.level} id="${translated.id}">`, `<span id="${id}" class="docs-heading-alias" aria-hidden="true"></span><h${translated.level} id="${translated.id}">`);

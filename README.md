@@ -24,6 +24,35 @@ npm run build
 `website/src/content/i18n/zh-CN/`，缺失则跳过。删除中文输入后会清掉旧生成物。
 中文生成物暂不接入公开导航、搜索或路由，也不套用英文标题别名与英文发布提示。
 
+## Chinese-first preview (temporary relaxed structure)
+
+Structure validation is strict by default. Only `DOCS_STRICT_STRUCTURE=0`
+relaxes the translation heading-count check; an unset variable, `1`, or any
+other value preserves the existing error and stops the build on a mismatch.
+Relaxed mode prints a warning with both heading counts for each mismatch.
+
+Use this only for local previews during the temporary Chinese-first workflow:
+edit `docs/zh-CN/**`, preview the result, then backfill the changes into the
+English source of truth in `flops-agent/docs/**`. Public releases must still
+update English first. From `website/`, run:
+
+```bash
+DOCS_STRICT_STRUCTURE=0 npm run build
+```
+
+After backfilling English and updating the local English mirror, you must
+rebuild in strict mode before publication:
+
+```bash
+env -u DOCS_STRICT_STRUCTURE npm run build
+```
+
+This switch only relaxes heading counts during synchronization; other build
+checks and translation tests remain strict. English anchor aliases still map
+by heading position, so reorganized Chinese sections may temporarily receive
+unrelated aliases; English headings with no Chinese counterpart are skipped.
+Review those anchors after aligning the documents.
+
 ## URL 策略
 
 本轮保持 `/docs`、`/docs/<slug>`、`/docs-source/<slug>.md`、`/docs-index.json`
