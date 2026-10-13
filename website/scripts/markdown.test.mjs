@@ -23,3 +23,17 @@ test('heading IDs, numbered lists, tables and reference links', () => {
   assert(html.includes('<td>two</td>'));
   assert(html.includes('href="https://example.test/release"'));
 });
+
+
+test('Chinese summaries consume only translated metadata label separators', () => {
+  for (const label of ['Reader question:', 'Prerequisites:', 'Outcome:']) {
+    const translated = { 'Reader question:': '读者问题：', 'Prerequisites:': '前置条件：', 'Outcome:': '预期结果：' }[label];
+    const prose = '使用 Flops 框架，保留 Python 产品中的空格。';
+    assert.equal(renderMarkdown(`**${label}** ${prose}`, 'zh-CN').summary, translated + prose);
+    assert.equal(renderMarkdown(`**${label}** Can I use Flops?`, 'en').summary, `${label} Can I use Flops?`);
+  }
+  assert.equal(renderMarkdown('**Prerequisites:** 使用 Python。 **Outcome:** 运行 Flops。', 'zh-CN').summary,
+    '前置条件：使用 Python。 预期结果：运行 Flops。');
+  const ordinary = '使用 Flops 框架， 保留原文。 **Outcome:** 普通正文';
+  assert.equal(renderMarkdown(ordinary, 'zh-CN').summary, ordinary);
+});

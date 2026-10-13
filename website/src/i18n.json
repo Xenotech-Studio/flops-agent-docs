@@ -50,7 +50,9 @@
     "暂无中文": "暂无中文",
     "Reader question:": "Reader question:",
     "Prerequisites:": "Prerequisites:",
-    "Outcome:": "Outcome:"
+    "Outcome:": "Outcome:",
+    "Social image alt": "A ready-to-integrate framework for server-side agents. Run it on your own server.",
+    "Home description": "Run it on your own server. Execution and subscriptions, cancellation and recovery, reconnecting clients, and remote tools have defined runtime mechanisms; you connect the model, storage, and executor."
   },
   "zh-CN": {
     "Skip to content": "跳至正文",
@@ -103,6 +105,8 @@
     "暂无中文": "暂无中文",
     "Reader question:": "读者问题：",
     "Prerequisites:": "前置条件：",
-    "Outcome:": "预期结果："
+    "Outcome:": "预期结果：",
+    "Social image alt": "可直接集成的服务端智能体框架，可在自己的服务器上运行。",
+    "Home description": "在自己的服务器上运行。执行与订阅、取消与恢复、客户端重连和远程工具都有明确的运行时机制；你负责接入模型、存储和执行器。"
   }
 }

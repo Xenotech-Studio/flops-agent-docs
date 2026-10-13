@@ -1,11 +1,15 @@
 // Emit document entry points so metadata is available before JavaScript runs.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
-const template = await readFile(new URL('dist/index.html', root), 'utf8');
+const dictionary = JSON.parse(await readFile(new URL('src/i18n.json', root), 'utf8'));
+const withImageAlt = (html, lang) => html.replace(/(<meta (?:property="og:image:alt"|name="twitter:image:alt") content=")[^"]*/g, (_, prefix) => prefix + escape(dictionary[lang]['Social image alt']));
+const source = await readFile(new URL('dist/index.html', root), 'utf8');
 const en = JSON.parse(await readFile(new URL('src/content/docs/_meta.json', root), 'utf8')).pages;
 const zh = JSON.parse(await readFile(new URL('src/content/i18n/zh-CN/_meta.json', root), 'utf8')).pages;
 const origin = 'https://flops-agent.xenotech.studio';
 const escape = value => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const template = withImageAlt(source, 'en');
+await writeFile(new URL('dist/index.html', root), template);
 for (const page of [...en, ...zh]) {
   const english = en.find(p => p.slug === page.slug);
   const chinese = zh.find(p => p.slug === page.slug);
@@ -15,7 +19,7 @@ for (const page of [...en, ...zh]) {
     <link rel="alternate" hreflang="x-default" href="${origin}${english.href}" />`;
   // Share the exact article HTML consumed by Docs.tsx on client navigation.
   const article = `<main id="docs-content" class="docs-main"><article class="docs-prose" lang="${page.lang}">${page.html}</article></main>`;
-  const html = template.replace('<div id="root"></div>', () => `<div id="root">${article}</div>`).replace('<html lang="en">', `<html lang="${page.lang}">`)
+  const html = withImageAlt(template, page.lang).replace('<div id="root"></div>', () => `<div id="root">${article}</div>`).replace('<html lang="en">', `<html lang="${page.lang}">`)
     .replace(/<title>.*?<\/title>/s, `<title>${escape(page.title)} · flops-agent</title>`)
     .replace(/<link rel="canonical"[^>]*>/, links)
     .replace(/(<meta\s+name="description"\s+content=")[^"]*/, `$1${escape(page.summary)}`)

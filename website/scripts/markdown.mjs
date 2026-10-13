@@ -84,17 +84,23 @@ export function renderMarkdown(source, lang = 'en') {
     let paragraph = lines[i++];
     while (i < lines.length && lines[i].trim() && !special(lines[i])) paragraph += '\n' + lines[i++];
     let summaryText = paragraph;
+    // Consume only the separator after a translated metadata label. Keep prose
+    // spacing (including Chinese/English word boundaries) and English unchanged.
+    const summaryLabel = label => {
+      const token = new RegExp(`\\*\\*${label}\\*\\*${lang === 'zh-CN' ? '\\s*' : ''}`);
+      summaryText = summaryText.replace(token, () => dictionary[lang][label]);
+    };
     let rendered = `<p>${inline(paragraph)}</p>`;
     // Metadata is identified by an exact paragraph-leading strong label.
     // Existing documents place Outcome in the Prerequisites paragraph.
     if (rendered.startsWith('<p><strong>Prerequisites:</strong>')) {
-      summaryText = summaryText.replace('**Outcome:**', () => dictionary[lang]['Outcome:']);
+      summaryLabel('Outcome:');
       rendered = rendered.replace('<strong>Outcome:</strong>',
         () => `<strong>${escape(dictionary[lang]['Outcome:'])}</strong>`);
     }
     rendered = rendered.replace(/^<p><strong>(Reader question:|Prerequisites:|Outcome:)<\/strong>/,
       (_, label) => {
-        summaryText = summaryText.replace(`**${label}**`, () => dictionary[lang][label]);
+        summaryLabel(label);
         return `<p><strong>${escape(dictionary[lang][label])}</strong>`;
       });
     if (!summary) summary = summaryText.replace(/\s+/g, ' ').slice(0, 200);

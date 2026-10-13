@@ -110,3 +110,30 @@ test('exports keep canonical tokens; static and client articles share localized 
     for (const label of labels) assert.ok(!pages.find(p => p.slug === '01-quick-start').publicMarkdown.includes(`**${label}**`));
   }
 });
+
+test('all static entry points have localized social metadata', async () => {
+  const dictionary = JSON.parse(await read('website/src/i18n.json'));
+  const escape = value => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const home = await read('website/dist/index.html');
+  for (const [lang, pages] of [['en', en], ['zh-CN', zh]]) {
+    for (const page of pages) {
+      for (const href of [page.href, ...(page.slug === 'overview' ? [page.href + '/overview'] : [])]) {
+        const html = await read(`website/dist${href}/index.html`);
+        for (const tag of ['property="og:image:alt"', 'name="twitter:image:alt"']) {
+          assert.ok(html.includes(`${tag} content="${escape(dictionary[lang]['Social image alt'])}"`), href + ': ' + tag);
+        }
+        for (const tag of ['property="og:title"', 'name="twitter:title"']) {
+          assert.ok(html.includes(`${tag} content="${escape(page.title)} · flops-agent"`), href + ': ' + tag);
+        }
+        for (const tag of ['property="og:description"', 'name="twitter:description"']) {
+          assert.ok(html.includes(`${tag} content="${escape(page.summary)}"`), href + ': ' + tag);
+        }
+        assert.ok(html.includes(`<title>${escape(page.title)} · flops-agent</title>`), href);
+      }
+    }
+  }
+  for (const tag of ['property="og:image:alt"', 'name="twitter:image:alt"']) {
+    assert.ok(home.includes(`${tag} content="${escape(dictionary.en['Social image alt'])}"`));
+  }
+  assert.ok(home.includes(`property="og:description" content="${escape(dictionary.en['Home description'])}"`));
+});

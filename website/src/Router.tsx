@@ -1,4 +1,4 @@
-import { localeFor, englishPath } from './i18n'
+import { localeFor, englishPath, translate } from './i18n'
 import data from './content/docs/_meta.json'
 import zhData from './content/i18n/zh-CN/_meta.json'
 
@@ -88,7 +88,22 @@ export default function Router() {
     }
   }, [])
   useEffect(() => {
-    document.documentElement.lang = localeFor(path)
+    const locale = localeFor(path)
+    document.documentElement.lang = locale
+    const pages = locale === 'en' ? data.pages : zhData.pages
+    const normalized = path.replace(/\/$/, '')
+    const page = pages.find(p => p.href === normalized || (p.slug === 'overview' && englishPath(normalized) === '/docs/overview'))
+    const title = path === '/' ? 'flops-agent — A ready-to-integrate framework for server-side agents' : `${page?.title ?? translate(locale, 'Document not found')} · flops-agent`
+    const description = path === '/' ? translate('en', 'Home description') : page?.summary ?? ''
+    for (const [selector, value] of [
+      ['meta[property="og:image:alt"], meta[name="twitter:image:alt"]', translate(locale, 'Social image alt')],
+      ['meta[property="og:title"], meta[name="twitter:title"]', title],
+      ['meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]', description],
+      ['meta[property="og:locale"]', locale === 'en' ? 'en_US' : 'zh_CN'],
+      ['meta[property="og:url"]', new URL(page?.href ?? path, 'https://flops-agent.xenotech.studio').href],
+    ]) {
+      document.querySelectorAll(selector).forEach(meta => meta.setAttribute('content', value))
+    }
     if (path === '/') {
       document.title = 'flops-agent — A ready-to-integrate framework for server-side agents'
       document.querySelectorAll('link[rel=canonical], link[hreflang]').forEach(link => link.remove())
