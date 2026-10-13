@@ -19,10 +19,71 @@ const shape = text => prose(text).split('\n').flatMap(line => {
   if (/^\d+\. /.test(line)) return ['ordered'];
   return [];
 });
+// This tutorial intentionally localizes comments, user-facing literals, and its
+// recorded output. Allow only these exact line pairs, not arbitrary string or
+// code differences; every other page still uses byte-for-byte block comparison.
+const quickStartLines = new Map([
+  [
+    "    \"\"\"Look up the delivery fee for a city.\"\"\"",
+    "    \"\"\"查询城市的配送费。\"\"\""
+  ],
+  [
+    "    return f\"The delivery fee for {city} is 6 CNY\"",
+    "    return f\"{city}的配送费是 6 元\""
+  ],
+  [
+    "                yield TextStreamChunk(text=f\"Result: {last['content']}\")",
+    "                yield TextStreamChunk(text=f\"查询结果：{last['content']}\")"
+  ],
+  [
+    "                    arguments_delta='{\"city\": \"Shanghai\"}',",
+    "                    arguments_delta='{\"city\": \"上海\"}',"
+  ],
+  [
+    "    run = runtime.start(session, Query.text(\"Please check the delivery fee for Shanghai\"))",
+    "    run = runtime.start(session, Query.text(\"请查一下上海的配送费\"))"
+  ],
+  [
+    "            print(\"Tool result: \", event.result, sep=\"\")",
+    "            print(\"工具结果：\", event.result, sep=\"\")"
+  ],
+  [
+    "            print(\"Model reply: \", event.text, sep=\"\")",
+    "            print(\"模型回复：\", event.text, sep=\"\")"
+  ],
+  [
+    "    # Memory updates run in the background; wait for the write before reading.",
+    "    # 记忆更新在后台调度，等写入完成后再读取。"
+  ],
+  [
+    "    print(\"Memory: \", memory.notes, sep=\"\")",
+    "    print(\"记忆：\", memory.notes, sep=\"\")"
+  ],
+  [
+    "Tool result: The delivery fee for Shanghai is 6 CNY",
+    "工具结果：上海的配送费是 6 元"
+  ],
+  [
+    "Model reply: Result: The delivery fee for Shanghai is 6 CNY",
+    "模型回复：查询结果：上海的配送费是 6 元"
+  ],
+  [
+    "Memory: ['Please check the delivery fee for Shanghai']",
+    "记忆：['请查一下上海的配送费']"
+  ]
+]);
+const localizedQuickStartBlocks = text => blocks(text).map(block =>
+  block.split('\n').map(line => quickStartLines.get(line) ?? line).join('\n'));
+const quickStartInline = new Map([
+  ['{"city": "Shanghai"}', '{"city": "上海"}'],
+  ['Tool result', '「工具结果」'],
+  ['Model reply', '「模型回复」'],
+]);
 for (const entry of entries) test(`${entry.file}: structure, code, metadata, external URLs`, async () => {
   const original = await read(`docs/en/${entry.file}`);
   const translated = await read(`docs/zh-CN/${entry.file}`);
-  assert.deepEqual(blocks(translated), blocks(original));
+  const quickStart = entry.file === '01-quick-start.md';
+  assert.deepEqual(blocks(translated), quickStart ? localizedQuickStartBlocks(original) : blocks(original));
   assert.deepEqual(shape(translated), shape(original));
   const labels = text => [...text.matchAll(/\*\*(Reader question|Prerequisites|Outcome):\*\*/g)].map(m => m[1]);
   assert.deepEqual(labels(translated), labels(original));
@@ -30,7 +91,33 @@ for (const entry of entries) test(`${entry.file}: structure, code, metadata, ext
   assert.deepEqual(urls(translated), urls(original));
   const inlineCode = text => [...prose(text).matchAll(/`([^`]+)`/g)].map(m => m[1]);
   const targetCode = inlineCode(translated);
-  for (const code of inlineCode(original)) assert.ok(targetCode.includes(code), `Missing code: ${code}`);
+  for (const code of inlineCode(original)) {
+    const localized = quickStart && quickStartInline.get(code);
+    if (localized && localized.startsWith('「')) {
+      assert.ok(prose(translated).includes(localized), `Missing translated output label: ${code}`);
+    } else {
+      assert.ok(targetCode.includes(localized || code), `Missing code: ${code}`);
+    }
+  }
+});
+test('quick-start translation allowance rejects code and output drift', async () => {
+  const original = await read('docs/en/01-quick-start.md');
+  const translated = await read('docs/zh-CN/01-quick-start.md');
+  const expected = localizedQuickStartBlocks(original);
+  assert.deepEqual(blocks(translated), expected);
+  // Do not mask changes to API names, protocol keys, values, or printed results.
+  for (const [before, after] of [
+    ['tools=[delivery_fee]', 'tools=[]'],
+    ['kwargs["messages"]', 'kwargs["message"]'],
+    ['timeout=5', 'timeout=50'],
+    ['index=0', 'index=1'],
+    ['上海的配送费是 6 元', '上海的配送费是 8 元'],
+  ]) {
+    assert.ok(translated.includes(before));
+    assert.notDeepEqual(blocks(translated.replace(before, after)), expected);
+  }
+  // English changes outside the approved translations must also be detected.
+  assert.notDeepEqual(localizedQuickStartBlocks(original.replace('timeout=5', 'timeout=50')), blocks(translated));
 });
 test('localized navigation, links, anchors and exports', async () => {
   assert.equal(zh.length, 17);
@@ -103,10 +190,20 @@ test('exports keep canonical tokens; static and client articles share localized 
       }
     }
     const quick = pages.find(p => p.slug === '01-quick-start');
-    assert.ok(quick.summary.startsWith(lang === 'en' ? 'Reader question:' : '读者问题：'));
+    // The rewritten quick start deliberately opens with ordinary tutorial prose,
+    // not a metadata block. Require the summary to match that opening paragraph.
+    const opening = quick.markdown.split('\n\n')[1];
+    assert.ok(opening && !opening.startsWith('#'));
+    assert.equal(quick.summary, opening.replace(/\s+/g, ' ').slice(0, 200));
     assert.ok(!quick.summary.includes('**'));
     const canonical = await read(`docs/${lang}/01-quick-start.md`);
-    for (const token of tokens) assert.ok(canonical.includes(`**${token}**`));
+    assert.equal(opening, canonical.split('\n\n')[1]);
+    assert.deepEqual(blocks(quick.markdown), blocks(canonical));
+    // Only this page is required to have no metadata. The all-page loop above
+    // still verifies canonical tokens and localized HTML wherever metadata exists.
+    for (const text of [canonical, quick.publicMarkdown, quick.html, quick.summary]) {
+      for (const label of [...tokens, ...labels]) assert.ok(!text.includes(label), `Unexpected quick-start metadata: ${label}`);
+    }
     for (const label of labels) assert.ok(!pages.find(p => p.slug === '01-quick-start').publicMarkdown.includes(`**${label}**`));
   }
 });
