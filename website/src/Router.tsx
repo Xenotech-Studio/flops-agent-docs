@@ -24,7 +24,8 @@ export default function Router() {
   const displayed = useRef(path)
   useEffect(() => {
     let generation = 0
-    let animation: Animation | undefined
+    let animations: Animation[] = []
+    const cancelAnimations = () => { animations.forEach(animation => animation.cancel()); animations = [] }
     const previousRestoration = history.scrollRestoration
     history.scrollRestoration = 'manual'
     const land = (hash: string) => {
@@ -35,11 +36,17 @@ export default function Router() {
     }
     const update = async () => {
       const ticket = ++generation
-      animation?.cancel()
+      cancelAnimations()
       resolveTranslation()
       const target = location.pathname
       const hash = location.hash
       const node = content.current!
+      // Keep the documentation shell visible, including across locale changes.
+      // Animate the two existing grid items to preserve sticky/responsive layout.
+      const docsNavigation = displayed.current !== '/' && target !== '/'
+      const targets = docsNavigation
+        ? Array.from(node.querySelectorAll<HTMLElement>('.docs-main, .docs-outline'))
+        : [node]
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
       const style = getComputedStyle(node)
       const time = style.getPropertyValue('--route-duration').trim()
@@ -50,16 +57,19 @@ export default function Router() {
       const changed = target !== displayed.current
       flushSync(() => setHeaderPath(target))
       if (changed && !reduced) {
-        animation = node.animate([{ opacity: 1 }, { opacity: 0 }], { duration, easing, fill: 'forwards' })
-        try { await animation.finished } catch { return }
+        animations = targets.map(target => target.animate([{ opacity: 1 }, { opacity: 0 }], { duration, easing, fill: 'forwards' }))
+        try { await Promise.all(animations.map(animation => animation.finished)) } catch { return }
       }
       if (ticket !== generation) return
       flushSync(() => { displayed.current = target; setPath(target) })
       land(hash)
-      animation?.cancel()
+      cancelAnimations()
       if (changed && !reduced) {
-        animation = node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: Math.max(0, duration * 2 - (performance.now() - started)), easing })
-        try { await animation.finished } catch { /* A newer navigation takes over. */ }
+        const incoming = docsNavigation
+          ? Array.from(node.querySelectorAll<HTMLElement>('.docs-main, .docs-outline'))
+          : [node]
+        animations = incoming.map(target => target.animate([{ opacity: 0 }, { opacity: 1 }], { duration: Math.max(0, duration * 2 - (performance.now() - started)), easing }))
+        try { await Promise.all(animations.map(animation => animation.finished)) } catch { /* A newer navigation takes over. */ }
       }
     }
     const click = (event: MouseEvent) => {
@@ -80,7 +90,7 @@ export default function Router() {
     window.addEventListener('popstate', onPopState)
     document.addEventListener('click', click)
     return () => {
-      ++generation; animation?.cancel()
+      ++generation; cancelAnimations()
       history.scrollRestoration = previousRestoration
       media.removeEventListener('change', onMotionChange)
       window.removeEventListener('popstate', onPopState)
@@ -115,7 +125,7 @@ export default function Router() {
   return <>
     <PublicHeader docs={headerPath !== '/'} path={headerPath} />
     <div className="route-content" ref={content}>
-      {path === '/' ? <App /> : <Docs key={path} path={path} />}
+      {path === '/' ? <App /> : <Docs path={path} />}
     </div>
   </>
 }

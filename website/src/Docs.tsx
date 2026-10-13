@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import data from './content/docs/_meta.json'
 import zhData from './content/i18n/zh-CN/_meta.json'
 import { localeFor, englishPath, translate } from './i18n'
@@ -39,6 +39,15 @@ export default function Docs({ path }: { path: string }) {
   const [search, setSearch] = useState(false)
   const [copy, setCopy] = useState(t("Copy page Markdown"))
   const [active, setActive] = useState('')
+  const copyRevision = useRef(0)
+  useLayoutEffect(() => {
+    // Reset page-local controls before Router lands and focuses the new main.
+    setMenu(false)
+    setSearch(false)
+    setCopy(translate(localeFor(path), 'Copy page Markdown'))
+    setActive('')
+    return () => { ++copyRevision.current }
+  }, [path])
   useEffect(() => {
     document.title = `${page?.title ?? t("Document not found")} · flops-agent`
     document.documentElement.lang = locale
@@ -71,10 +80,15 @@ export default function Docs({ path }: { path: string }) {
     }
     update(); window.addEventListener('scroll', update, { passive: true })
     return () => { links.forEach(link => link.remove()); window.removeEventListener(DOCS_SEARCH_EVENT, openSearch); window.removeEventListener('keydown', key); window.removeEventListener('scroll', update) }
-  }, [page])
+  }, [page, locale, path])
   async function copyMarkdown() {
-    try { await navigator.clipboard.writeText(page!.publicMarkdown); setCopy(t("Copied")) }
-    catch { setCopy(t("Copy failed; open the raw Markdown")) }
+    const revision = copyRevision.current
+    try {
+      await navigator.clipboard.writeText(page!.publicMarkdown)
+      if (revision === copyRevision.current) setCopy(t("Copied"))
+    } catch {
+      if (revision === copyRevision.current) setCopy(t("Copy failed; open the raw Markdown"))
+    }
   }
   const section = sections.find(section => section.id === page?.section)
   const sectionPages = section?.navigation === false || !page ? pages : pages.filter(p => p.section === page.section)
@@ -83,7 +97,7 @@ export default function Docs({ path }: { path: string }) {
   return <div className="docs-page">
     <div className="docs-area-bar"><nav className="docs-area-inner" aria-label={t("Documentation areas")}>{sections.filter(section => section.navigation !== false).map(section => <a key={section.id} href={section.href} aria-current={section.id === page?.section ? 'page' : undefined}>{section.title}</a>)}</nav></div>
     <div className="docs-layout">
-      <aside className="docs-sidebar"><button className="docs-menu-toggle" aria-expanded={menu} aria-controls="docs-navigation" onClick={() => setMenu(!menu)}>{t("Documentation menu")} <span>{menu ? '−' : '+'}</span></button><nav id="docs-navigation" className={menu ? 'open' : ''} aria-label={t("Documentation menu")}>{groups.map(group => <div className="docs-group" key={group}><p>{group}</p>{sectionPages.filter(p => p.group === group).map(p => <a key={p.slug} href={p.href} aria-current={p === page ? 'page' : undefined}>{p.title}</a>)}</div>)}</nav><a className="docs-repo" href="https://github.com/Xenotech-Studio/flops-agent">GitHub ↗</a></aside>
+      <aside className="docs-sidebar"><button className="docs-menu-toggle" aria-expanded={menu} aria-controls="docs-navigation" onClick={() => setMenu(!menu)}>{t("Documentation menu")} <span>{menu ? '−' : '+'}</span></button><nav id="docs-navigation" className={menu ? 'open' : ''} aria-label={t("Documentation menu")}>{groups.map(group => <div className="docs-group" key={sectionPages.find(p => p.group === group)!.slug}><p>{group}</p>{sectionPages.filter(p => p.group === group).map(p => <a key={p.slug} href={p.href} aria-current={p === page ? 'page' : undefined}>{p.title}</a>)}</div>)}</nav><a className="docs-repo" href="https://github.com/Xenotech-Studio/flops-agent">GitHub ↗</a></aside>
       <main id="docs-content" tabIndex={-1} className="docs-main">{page ? <>
         <div className="docs-breadcrumb"><a href={locale === 'zh-CN' ? '/zh-CN/docs' : '/docs'}>{t("Docs")}</a><span>/</span><a href={section?.href}>{section?.title}</a><span>/</span><span>{page.group}</span></div>
         <div className="docs-tools"><button onClick={copyMarkdown}><span aria-live="polite">{copy}</span></button><a href={`/docs-source/${locale === 'zh-CN' ? 'zh-CN/' : ''}${page.slug}.md`}>{t("Raw Markdown ↗")}</a></div>
