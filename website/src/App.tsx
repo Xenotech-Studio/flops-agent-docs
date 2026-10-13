@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { translate } from './i18n'
 
 const installExample = `# Python ≥ 3.10; use a virtual environment
 pip install flops-agent`
@@ -48,6 +49,7 @@ asyncio.run(main())`
 
 
 function CopyButton({ text }: { text: string }) {
+  const t = (label: string) => translate('en', label)
   const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -71,10 +73,10 @@ function CopyButton({ text }: { text: string }) {
           <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" />
           <path d="M10.5 3.5v-1h-8v8h1" stroke="currentColor" strokeLinejoin="round" />
         </svg>
-        Copy code
+        {t('Copy code')}
       </button>
       <span className={`copy-feedback${status === 'failed' ? ' copy-error' : ''}`} role="status">
-        {status === 'copied' ? 'Copied' : status === 'failed' ? 'Copy failed; select the text manually' : ''}
+        {status === 'copied' ? t('Copied') : status === 'failed' ? t('Copy failed; select the text manually') : ''}
       </span>
     </span>
   )

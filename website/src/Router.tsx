@@ -1,3 +1,16 @@
+import { localeFor, englishPath } from './i18n'
+import data from './content/docs/_meta.json'
+import zhData from './content/i18n/zh-CN/_meta.json'
+
+function resolveTranslation() {
+  if (localeFor(location.pathname) !== 'zh-CN') return
+  const enPath = englishPath(location.pathname).replace(/\/$/, '')
+  const en = data.pages.find(p => p.href === enPath || (p.slug === 'overview' && enPath === '/docs/overview'))
+  if (en && !zhData.pages.some((p: { slug: string }) => p.slug === en.slug)) {
+    history.replaceState(null, '', en.href + '?translation-missing=1' + location.hash)
+  }
+}
+resolveTranslation()
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import App from './App'
@@ -23,6 +36,7 @@ export default function Router() {
     const update = async () => {
       const ticket = ++generation
       animation?.cancel()
+      resolveTranslation()
       const target = location.pathname
       const hash = location.hash
       const node = content.current!
@@ -53,7 +67,7 @@ export default function Router() {
       const anchor = (event.target as Element).closest('a')
       if (!anchor || anchor.target || anchor.hasAttribute('download')) return
       const url = new URL(anchor.href)
-      if (url.origin !== location.origin || !/^\/(?:docs(?:\/[^/]+)?\/?)?$/.test(url.pathname)) return
+      if (url.origin !== location.origin || !/^\/(?:zh-CN\/)?(?:docs(?:\/[^/]+)?\/?)?$/.test(url.pathname)) return
       if (url.pathname === location.pathname && url.hash) return
       event.preventDefault()
       history.pushState(null, '', url)
@@ -74,10 +88,17 @@ export default function Router() {
     }
   }, [])
   useEffect(() => {
-    if (path === '/') document.title = 'flops-agent — A ready-to-integrate framework for server-side agents'
+    document.documentElement.lang = localeFor(path)
+    if (path === '/') {
+      document.title = 'flops-agent — A ready-to-integrate framework for server-side agents'
+      document.querySelectorAll('link[rel=canonical], link[hreflang]').forEach(link => link.remove())
+      const canonical = document.createElement('link')
+      canonical.rel = 'canonical'; canonical.href = 'https://flops-agent.xenotech.studio/'
+      document.head.append(canonical)
+    }
   }, [path])
   return <>
-    <PublicHeader docs={headerPath !== '/'} />
+    <PublicHeader docs={headerPath !== '/'} path={headerPath} />
     <div className="route-content" ref={content}>
       {path === '/' ? <App /> : <Docs key={path} path={path} />}
     </div>

@@ -4,5 +4,9 @@ website/src/content/docs/
 website/src/content/i18n/
 website/public/docs-source/
 website/public/docs-index.json
+website/public/zh-CN/docs-index.json
 *.tsbuildinfo
 __pycache__/
+
+# Local runtime state
+.flops/

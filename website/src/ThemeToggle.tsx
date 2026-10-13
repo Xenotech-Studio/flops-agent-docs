@@ -1,3 +1,5 @@
+import { translate } from './i18n'
+import type { Locale } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 
 const STORAGE_KEY = 'flops-agent.colorTheme'
@@ -17,7 +19,7 @@ function apply(mode: Mode) {
   document.documentElement.style.colorScheme = theme
   document.documentElement.style.backgroundColor = theme === 'dark' ? '#141414' : '#ffffff'
 }
-export default function ThemeToggle() {
+export default function ThemeToggle({ locale = 'en' }: { locale?: Locale }) {
   const [mode, setMode] = useState<Mode>(read)
   const current = useRef(mode)
   function change(next: Mode, persist = true) {
@@ -40,7 +42,7 @@ export default function ThemeToggle() {
     window.addEventListener('keydown', key)
     return () => { system.removeEventListener('change', follow); window.removeEventListener('storage', storage); window.removeEventListener('keydown', key) }
   }, [])
-  const description = `Theme: ${labels[mode]}; switch to ${labels[modes[(modes.indexOf(mode) + 1) % modes.length]]}`
+  const description = `${translate(locale, 'Theme')}: ${translate(locale, labels[mode])}; ${translate(locale, 'switch to')} ${translate(locale, labels[modes[(modes.indexOf(mode) + 1) % modes.length]])}`
   return <button type="button" className="theme-toggle" onClick={cycle} aria-label={description} title={description} aria-keyshortcuts="Control+F1 Meta+F1" data-mode={mode}>
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {mode === 'light' ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></> : mode === 'dark' ? <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4a8.5 8.5 0 1 0 11.5 11.5Z" /> : <><circle cx="12" cy="12" r="8" fill="var(--code-panel-fg)" /><path d="M12 4a8 8 0 0 1 0 16Z" fill="var(--code-panel-bar)" stroke="none" /><path d="m15 3-6 18" strokeWidth="3" className="theme-icon-cut" /><path d="m15 3-6 18" /></>}

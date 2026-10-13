@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "docs:sync": "node scripts/sync-docs.mjs",
     "prebuild": "npm run docs:sync",
-    "predev": "npm run docs:sync"
+    "predev": "npm run docs:sync",
+    "postbuild": "node scripts/build-doc-pages.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",

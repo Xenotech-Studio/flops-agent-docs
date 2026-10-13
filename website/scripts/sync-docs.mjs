@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { isAbsolute, join, posix } from 'node:path';
 import { renderMarkdown } from './markdown.mjs';
@@ -30,38 +30,56 @@ const sections = definitions.map(section => {
 const github = 'https://github.com/Xenotech-Studio/flops-agent/';
 const forbidden = /(?:^|\/)(?:TODO|DESIGN_NOTES_FROM_DOCS|IA)\.md(?:$|[#?])/i;
 const routes = new Map(sources.map(s => [s.file, s.slug === 'overview' ? '/docs' : `/docs/${s.slug}`]));
-function rewrite(markdown) {
+const translatedFiles = new Set(await readdir(zhSourceDir).catch(() => []));
+const dictionary = JSON.parse(await readFile(new URL('../src/i18n.json', import.meta.url), 'utf8'));
+const localize = (text, lang) => dictionary[lang][text] ?? text;
+function rewrite(markdown, lang) {
   return markdown.replace(/(\]\()([^\s)]+)(\))/g, (_, start, href, end) => {
     if (/^(?:[a-z]+:|\/|#)/i.test(href)) return start + href + end;
     if (forbidden.test(href)) throw new Error(`Disallowed documentation link: ${href}`);
     const [file, hash] = href.split('#');
     const normalized = posix.normalize(file);
-    const target = routes.get(normalized);
+    const original = routes.get(normalized);
+    const target = original && (lang === 'zh-CN' && translatedFiles.has(normalized) ? '/zh-CN' : '') + original;
     return start + (target ? target + (hash ? `#${hash}` : '') : github + (file.endsWith('/') ? 'tree/' : 'blob/') + 'master/' + posix.normalize('docs/' + file) + (hash ? `#${hash}` : '')) + end;
   });
 }
 // Read every required local source before touching generated output. Explicit allowlist only.
-async function readPages(sourceDir, lang, optional = false) {
+async function readPages(directory, lang, optional = false) {
 return (await Promise.all(sources.map(async (entry, order) => {
   if (forbidden.test(entry.file) || !/^[\w-]+\.md$/.test(entry.file) || !/^[\w-]+$/.test(entry.slug)) throw new Error('Invalid documentation manifest');
   let markdown;
-  try { markdown = await readFile(join(sourceDir, entry.file), 'utf8'); }
+  try { markdown = await readFile(join(directory, entry.file), 'utf8'); }
   catch (error) {
     if (optional && error.code === 'ENOENT') return null;
     throw new Error(`Missing required document ${entry.file}: ${error.message}`);
   }
   markdown = dropSections(markdown, entry.drop_sections);
-  if (entry.publication_note && lang === 'en') {
+  if (entry.publication_note) {
     if (typeof entry.publication_note !== 'string' || /[\r\n]/.test(entry.publication_note)) throw new Error('publication_note must be a single line');
-    markdown = markdown.replace(/^(#\s+.+)$/m, `$1\n\n${entry.publication_note}`);
+    markdown = markdown.replace(/^(#\s+.+)$/m, `$1\n\n${lang === 'en' ? entry.publication_note : '仅列出已发布版本，不包含尚未发布的变更。读者问题：哪些变更已经发布？前提：无。目标：确认升级范围。'}`);
   }
   const h1 = markdown.match(/^#\s+(.+)$/m)?.[1];
   if (!h1) throw new Error(`${entry.file} Missing H1`);
-  markdown = rewrite(markdown);
+  markdown = rewrite(markdown, lang);
   const title = h1;
-  const href = routes.get(entry.file);
+  const href = (lang === 'zh-CN' ? '/zh-CN' : '') + routes.get(entry.file);
   const source = lang === 'en' ? `docs/${entry.file}` : `docs/zh-CN/${entry.file}`;
-  let { html, headings, summary } = renderMarkdown(markdown);
+  let { html, headings, summary } = renderMarkdown(markdown, lang);
+  if (lang === 'zh-CN') {
+    const english = dropSections(await readFile(join(sourceDir, entry.file), 'utf8'), entry.drop_sections);
+    const originalHeadings = renderMarkdown(english).headings;
+    if (originalHeadings.length !== headings.length) throw new Error(`${entry.file}: translation heading count differs`);
+    const used = new Set(headings.map(h => h.id));
+    for (const [index, original] of originalHeadings.entries()) {
+      const translated = headings[index];
+      const aliases = [original.id, ...Object.entries(entry.heading_aliases ?? {}).filter(([, target]) => target === original.text).map(([id]) => id)];
+      for (const id of aliases) if (!used.has(id)) {
+        html = html.replace(`<h${translated.level} id="${translated.id}">`, `<span id="${id}" class="docs-heading-alias" aria-hidden="true"></span><h${translated.level} id="${translated.id}">`);
+        used.add(id);
+      }
+    }
+  }
   // Preserve published heading URLs when a tutorial is rewritten or split.
   // Aliases resolve to an existing semantic section; moved topics link onward.
   const aliases = lang === 'en' ? entry.heading_aliases ?? {} : {};
@@ -73,9 +91,9 @@ return (await Promise.all(sources.map(async (entry, order) => {
   }
   if (!['zh-CN', 'en'].includes(lang)) throw new Error(`${entry.slug}: Invalid lang`);
   const section = sections.find(section => section.id === entry.section);
-  const header = { canonical: href, section: section.id, title, group: entry.group, status: 'Content from the local clone used for this build', source, overview: entry.overview === true };
+  const header = { canonical: href, section: section.id, title, group: localize(entry.group, lang), status: 'Content from the local clone used for this build', source, overview: entry.overview === true };
   const publicMarkdown = '---\n' + Object.entries(header).map(([k,v]) => `${k}: ${JSON.stringify(v)}`).join('\n') + '\n---\n\n' + markdown;
-  return { slug: entry.slug, section: section.id, section_title: section.title, section_url: section.href, section_order: section.order, kind: section.kind, title, group: entry.group, order, href, source, lang, markdown, publicMarkdown, html, headings, heading_aliases: aliases, summary, overview: header.overview };
+  return { slug: entry.slug, section: section.id, section_title: localize(section.title, lang), section_url: (lang === 'zh-CN' ? '/zh-CN' : '') + section.href, section_order: section.order, kind: section.kind, title, group: localize(entry.group, lang), order, href, source, lang, markdown, publicMarkdown, html, headings, heading_aliases: aliases, summary, overview: header.overview };
 }))).filter(Boolean);
 }
 const pages = await readPages(sourceDir, 'en');
@@ -93,12 +111,17 @@ await writeFile(join(website, 'src/content/docs/_meta.json'), JSON.stringify({ s
 await writeFile(join(website, 'public/docs-index.json'), JSON.stringify(pages.map(p => ({ slug: p.slug, title: p.title, summary: p.summary, section: p.section, section_title: p.section_title, section_url: p.section_url, section_order: p.section_order, kind: p.kind, status: 'Content from the local clone used for this build', canonical_url: p.href, markdown_url: `/docs-source/${p.slug}.md`, source: p.source, group: p.group, overview: p.overview, headings: p.headings, heading_aliases: p.heading_aliases })), null, 2) + '\n');
 console.log(`Synced ${pages.length} pages from local docs; explicit publication manifest only.`);
 
-// Stage translations internally only: public routes and search remain English this round.
+// Always emit metadata, including an empty translation set for incremental builds.
 const zhOutput = join(website, 'src/content/i18n/zh-CN');
 await rm(zhOutput, { recursive: true, force: true });
-if (zhPages.length) {
-  await mkdir(zhOutput, { recursive: true });
-  for (const page of zhPages) await writeFile(join(zhOutput, page.slug + '.md'), page.markdown);
-  await writeFile(join(zhOutput, '_meta.json'), JSON.stringify({ locale: 'zh-CN', published: false, sections, pages: zhPages }, null, 2) + '\n');
+await mkdir(zhOutput, { recursive: true });
+await mkdir(join(website, 'public/docs-source/zh-CN'), { recursive: true });
+for (const page of zhPages) {
+  await writeFile(join(zhOutput, page.slug + '.md'), page.markdown);
+  await writeFile(join(website, 'public/docs-source/zh-CN', page.slug + '.md'), page.publicMarkdown);
 }
-console.log(`Staged ${zhPages.length} zh-CN pages for future localized routing (not published).`);
+const zhSections = sections.map(section => ({ ...section, title: localize(section.title, 'zh-CN'), href: zhPages.find(p => p.section === section.id)?.href ?? section.href }));
+await writeFile(join(zhOutput, '_meta.json'), JSON.stringify({ sections: zhSections, pages: zhPages }, null, 2) + '\n');
+await mkdir(join(website, 'public/zh-CN'), { recursive: true });
+await writeFile(join(website, 'public/zh-CN/docs-index.json'), JSON.stringify(zhPages.map(p => ({ slug: p.slug, title: p.title, summary: p.summary, section: p.section, section_title: p.section_title, section_url: p.section_url, section_order: p.section_order, kind: p.kind, status: 'Content from the local clone used for this build', canonical_url: p.href, markdown_url: `/docs-source/zh-CN/${p.slug}.md`, source: p.source, group: p.group, overview: p.overview, headings: p.headings, heading_aliases: p.heading_aliases })), null, 2) + '\n');
+console.log(`Published ${zhPages.length} zh-CN pages.`);
