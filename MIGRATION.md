@@ -2,7 +2,7 @@
 
 ## 本轮完成
 
-新工作树：`/home/ubuntu/flowseries/flops-agent-docs`。未初始化 Git、未提交、未推送。
+工作树：`/home/ubuntu/flowseries/flops-agent-docs`。本次设计调整未提交、未推送。
 源仓：`/home/ubuntu/flowseries/flops-agent`，默认分支经远端核实为 `master`；新仓默认分支 `main`。
 
 1. 原站点 36 个跟踪文件完整迁入 `website/`，相对结构不变。仅修改同步器和已有测试的文档输入路径。
@@ -11,8 +11,8 @@
 4. 源仓新增 `scripts/mirror-docs.sh` 和 `.github/workflows/docs-sync-publish.yml`。
    同步脚本使用 git 跟踪清单、临时目录及 rsync，只修改目标 `docs/en/`；支持更新与删除。
    工作流在暂存区无差异时退出，不创建空提交；提交记录实际读取的完整源 SHA。
-5. 新仓添加接收式手动补同步、站点构建校验、翻译占位三个工作流。
-   主动推送是主流程，手动接收使用同一源仓脚本，没有双向同步。
+5. 新仓添加定时/手动拉取同步、站点构建校验、翻译占位三个工作流。
+   定时拉取是主流程，使用同一源仓脚本；源仓推送保留为可选增强，没有双向同步。
 6. 原仓 CI 移除已迁走的 website-build job，产品测试任务保留；README 写明分工。
 7. 原仓 36 个站点跟踪文件已删除。**本机 `website/` 仍有被 Git 忽略的旧 dist、依赖和生成文件**：
    nginx 配置正指向旧 `website/dist`，为遵守“不动线上”保留它们。不要在切换前执行 `git clean -fdx` 或删除这个目录。
@@ -29,49 +29,46 @@
   英文生成 Markdown、页面元数据和搜索 JSON 与原同步器生成结果逐字节一致；React 路由未改动。
   临时中文样板可生成内部数据，移除后旧生成物清理，英文索引不变。
 - [源仓 git status](evidence/source-git-status.txt)：36 项删除、新增同步工作流与脚本、CI/README 修改。
-- 本地 bash 语法检查与 `git diff --check` 通过；GitHub Actions 的实际跨仓运行需作者配置 token 并推送后验证。
+- 本地 bash 语法检查与 `git diff --check` 通过；GitHub Actions 的实际运行需文件推送后验证，不需要配置 secret。
 
-## 作者必须手动完成
+## 无 secret 的主同步通道
 
-1. **初始化并首次推送新仓**（本轮没有执行）：
+`sync-docs.yml` 名为 `Sync English docs from flops-agent`，通过
+`cron: '*/30 * * * *'` 每 30 分钟执行，也支持 `workflow_dispatch` 手动立即请求同步。
+检出公开源仓 master（不持久化凭据），再检出本站 main，调用现有镜像脚本。
+仅当 docs/en 有差异才以 `flops-agent-docs-sync[bot]` 提交并推送，提交信息携带完整源 SHA。
+本仓默认 `GITHUB_TOKEN` 配合 `contents: write` 即可完成写入，不需要任何自建 token 或 secret。
+默认 token 推送不会触发下游工作流，因此本任务随后自行执行 npm ci 与 npm run build；
+无差异仅退出镜像步骤，仍执行构建校验。
 
-   ```bash
-   cd /home/ubuntu/flowseries/flops-agent-docs
-   git init -b main
-   git remote add origin git@github.com:Xenotech-Studio/flops-agent-docs.git
-   git add .
-   git commit -m "feat(docs): migrate website and scaffold English mirror and i18n"
-   git push -u origin main
-   ```
+正常调度下等待下一轮最多约 30 分钟，另加任务执行时间；GitHub 调度可能延迟或丢弃任务，
+所以这不是严格的 30 分钟延迟上限。公开仓库连续 60 天无活动会自动停用计划任务，
+届时需重新启用；定时工作流必须存在于默认分支。
+[官方 schedule 说明](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)。
 
-   若远端已有初始提交，先自行衔接历史，不要强推。
+## 可选即时推送升级
 
-2. 创建 fine-grained PAT，资源所有者 Xenotech-Studio，仓库仅选择 `flops-agent-docs`，
-   授予 **Contents: read and write**。在源仓 **Settings → Secrets and variables → Actions**
-   新增 **`FLOPS_AGENT_DOCS_SYNC_TOKEN`**；若组织需要审批，完成审批。
-   两仓需允许 Actions，新仓分支规则需允许同步身份直接写 main。
+仅在将来需要源仓文档 push 后即时同步时，创建 fine-grained PAT：目标仅选择
+`Xenotech-Studio/flops-agent-docs`，授予 **Contents: read and write**，
+在源仓 Actions secrets 中保存为 **`FLOPS_AGENT_DOCS_SYNC_TOKEN`**。
+源仓 workflow 在后续文档 push 时启用即时同步，或通过手动入口立即请求执行。
+未配置时成功输出跳过说明，不检出、不镜像、不推送，不因缺失 secret 报错。
 
-3. **提交并推送源仓改动**：
+实现使用 job 级 `env.SYNC_TOKEN` 映射 secret，在各个 `steps[].if` 中判断它。
+job 级 if 只保留默认分支条件，不使用 env 或 secrets。
+依据：[上下文可用性表](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability)
+与 [secret 条件使用说明](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets#using-secrets-in-a-workflow)。
 
-   ```bash
-   cd /home/ubuntu/flowseries/flops-agent
-   git add README.md .github/workflows/ci.yml .github/workflows/docs-sync-publish.yml scripts/mirror-docs.sh
-   git add -u -- website
-   git commit -m "refactor(docs): move website to flops-agent-docs and publish English mirror"
-   git push origin master
-   ```
+## 作者需要做的事
 
-   提交范围：README、CI 调整、新工作流、新脚本、website 的 36 项删除。`docs/**`、nginx 配置不需提交。
-   上述提交自身没有修改 `docs/**`，故**不会自动触发 path-filtered 同步**。
-   两仓就绪后手动运行源仓 `Mirror English documentation`（workflow_dispatch）做首次联通校验；
-   若新仓镜像一致，应无新提交。下次 master 上 docs 变化应生成一个 bot 提交，再次同步应无提交。
-   也可用新仓 `Receive English docs (manual recovery)` 补同步。
+**本次设计不增加任何必需配置步骤：零个 secret，零个自建 token。**
+按约定由作者提交并推送这四个文件；源仓现有镜像脚本也须已在 master（沿用前轮迁移交接）。
+文件进入默认分支后自动定时拉取，不要求手动首次触发；想立即验证可手动运行 docs 仓同步。
+本轮不代替作者执行 commit/push，也没有创建 secret 或生成 token。
+默认 token 仍受仓库保护规则约束；若 main 禁止自动化直接推送，需允许同步身份。
 
-4. **网站仍然人工构建上线**。本轮不要切 nginx；旧配置和旧 dist 继续保留。
-   未来作者择时在新仓运行 `cd website && npm ci && npm run build`，
-   按现有发布流程使用该产物。若需要切 root，目标为新仓 `website/dist/` 或既有发布目录，
-   由作者另行处理 nginx 配置和切换检查；本轮没有修改 `/etc/nginx`、配置文件或重启服务。
-   切换完成再处理旧 `website/` 物理残留，以及源仓 `deploy/nginx-flopsruntime.conf` 的归属。
+网站仍由人工构建上线。本轮不切 nginx，不修改部署方式；旧配置及旧 dist 继续保留。
+未来择时使用新仓 website/dist 产物，nginx 切换及旧物理目录清理由作者在后续发布时处理。
 
 ## 下一轮
 
@@ -81,9 +78,9 @@
 
 ## 已知限制与未验证项
 
-- 尚未配置 secret 或在 GitHub 运行工作流，因此无法声称跨仓 bot 提交已实际发生。
-- 两仓 concurrency 不互通；同时写 main 的非快进推送会失败且不会强推，重跑可恢复。
-- 当前公开源仓允许新仓手动接收无额外源 token；将来转私有需补源仓读取凭据。
-- 默认分支将来若改名，更新源仓 push branches 及新仓补同步 checkout ref。
+- 本轮未在 GitHub 运行工作流，因此不声称定时任务或 bot 提交已实际发生；secret 不再是前置条件。
+- 若启用可选即时推送，两仓 concurrency 不互通；同时写 main 的非快进推送会失败且不会强推，重跑可恢复。
+- 当前公开源仓允许新仓定时/手动拉取无额外源 token；将来转私有需补源仓读取凭据。
+- 默认分支将来若改名，更新源仓 push branches 及新仓拉取 checkout ref。
 - 构建成功但 Vite 提示 JS chunk 超过 500 kB（约 522 kB）；本轮保留原站点行为。
 - 未修改或验证服务器实际生效的 nginx 配置、未测试线上发布；保留旧产物避免影响当前服务。

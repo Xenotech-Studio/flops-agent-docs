@@ -1,10 +1,12 @@
-name: Receive English docs (manual recovery)
+name: Sync English docs from flops-agent
 on:
+  schedule:
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: manual-docs-sync
+  group: docs-sync
   cancel-in-progress: false
 jobs:
   receive:

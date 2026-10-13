@@ -33,25 +33,34 @@ npm run build
 
 ## 英文自动镜像
 
-主路径由源仓 `.github/workflows/docs-sync-publish.yml` 在默认分支 `master` 的
-`docs/**` push 后运行，向本仓 `main` 的 `docs/en/**` 提交；只镜像此目录。
+主通道是本仓 `.github/workflows/sync-docs.yml`（`Sync English docs from flops-agent`）：
+每 30 分钟运行一次（`cron: '*/30 * * * *'`），从公开源仓 `master` 拉取，
+只镜像到本仓 `main` 的 `docs/en/**`。也可通过 `workflow_dispatch` 手动立即请求同步。
+**无需创建任何 secret 或跨仓 token**：源仓公开可读，本仓写入使用自动提供的
+`GITHUB_TOKEN` 与工作流声明的 `permissions: contents: write`。
+
 提交作者为 `flops-agent-docs-sync[bot]`，信息为
 `chore(sync): mirror docs from Xenotech-Studio/flops-agent@<full-sha>`。
-同步读取运行时源仓默认分支最新 HEAD，并记录该完整 SHA，防止重跑旧任务覆盖新文档。
-没有文件差异时不产生提交。文件删除也同步。
+记录实际读取的完整源 SHA；没有文件差异时不产生提交，文件删除也同步。
+`GITHUB_TOKEN` 的 push 不会触发下游工作流，所以同步任务在推送后自行执行
+`cd target/website && npm ci && npm run build`；无变化时也保留构建校验。
 
-**作者必须手动做一步：**创建 fine-grained PAT，资源所有者选 Xenotech-Studio，
-仓库仅选 `flops-agent-docs`，授予 **Contents: read and write**，然后在
-`flops-agent → Settings → Secrets and variables → Actions → New repository secret`
-添加 **`FLOPS_AGENT_DOCS_SYNC_TOKEN`**。若组织要求审批，先批准该 token。
-源仓默认 `GITHUB_TOKEN` 只有源仓读取权限，无法代替跨仓 token。
+代价是正常调度下需等待下一轮，计划等待最多约 30 分钟，另加执行时间；
+**不是严格的 30 分钟送达保证**：GitHub 高负载时可能延迟甚至丢弃计划任务。
+公开仓库连续 60 天无活动，计划任务会自动停用，届时需重新启用。
+计划任务只在默认分支运行；手动入口可用于及时补同步。
+参见 [GitHub schedule 文档](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)。
 
-新仓 `sync-docs.yml` 选择 **workflow_dispatch 接收式补同步**，从源仓 master 拉取，
-使用同一个镜像脚本；不增加 repository_dispatch 链路。源仓主动推送与参考分工一致，
-新仓手动入口便于漏同步恢复。该入口使用本仓 `GITHUB_TOKEN` 的 contents: write，
-其提交不会触发其他 workflow，因此在本任务内也做构建校验。
-两个仓的任务无法共享 concurrency 锁；并发推送冲突会安全失败（不强推），重跑即可。
-仓库规则需要允许该身份直接写 main；如启用了必须 PR 规则，作者需自行配置允许的自动化身份。
+可选升级：若将来需要即时推送同步，创建 fine-grained PAT，资源所有者选
+Xenotech-Studio，仓库仅选 `flops-agent-docs`，授予 **Contents: read and write**，
+存入源仓 Actions secret **`FLOPS_AGENT_DOCS_SYNC_TOKEN`**。
+源仓 `docs-sync-publish.yml` 即在后续 master 的 `docs/**` push 时生效；也可手动触发。
+未配置该 secret 时，只输出跳过说明，checkout、镜像和推送步骤均跳过，任务成功结束。
+这只是可选增强，不是定时同步的前置步骤。
+
+手动和定时拉取共享 concurrency，避免本仓同步并行；若启用可选推送，两仓锁不互通，
+并发推送冲突会安全失败（不强推），可等待下一轮或手动重跑。
+默认 token 仍受仓库规则约束；若 main 有禁止直接写入的保护规则，需要允许该同步身份。
 
 ## 发布与职责
 
