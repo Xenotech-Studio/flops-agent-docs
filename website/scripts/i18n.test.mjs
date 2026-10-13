@@ -78,3 +78,35 @@ test('empty and partial translation builds keep English exports unchanged', asyn
     for (const page of en) assert.equal(await readFile(join(dir, `website/public/docs-source/${page.slug}.md`), 'utf8'), page.publicMarkdown);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+test('metadata labels translate only known paragraph structures', () => {
+  const source = '**Reader question:** Q\n\n**Prerequisites:** P. **Outcome:** O\n\n**Outcome:** O';
+  assert.equal(renderMarkdown(source, 'zh-CN').html, '<p><strong>读者问题：</strong> Q</p><p><strong>前置条件：</strong> P. <strong>预期结果：</strong> O</p><p><strong>预期结果：</strong> O</p>');
+  assert.equal(renderMarkdown(source).html, '<p><strong>Reader question:</strong> Q</p><p><strong>Prerequisites:</strong> P. <strong>Outcome:</strong> O</p><p><strong>Outcome:</strong> O</p>');
+  for (const ordinary of ['Outcome is prose.', 'Text **Outcome:** stays.', '**Outcome**', '# **Reader question:**', '- **Prerequisites:**', '> **Outcome:**', '`**Outcome:**`', '[**Outcome:**](https://example.com)', '```\n<p><strong>Reader question:</strong>\n```', '<p><strong>Outcome:</strong>']) {
+    assert.equal(renderMarkdown(ordinary, 'zh-CN').html.replace('代码块；可横向滚动', 'Code block; scroll horizontally'), renderMarkdown(ordinary).html, ordinary);
+  }
+});
+
+test('exports keep canonical tokens; static and client articles share localized HTML', async () => {
+  const tokens = ['Reader question:', 'Prerequisites:', 'Outcome:'];
+  const labels = ['读者问题：', '前置条件：', '预期结果：'];
+  for (const [lang, pages] of [['en', en], ['zh-CN', zh]]) {
+    for (const page of pages) {
+      const output = await read(`website/dist${page.href}/index.html`);
+      assert.ok(output.includes(`<article class="docs-prose" lang="${lang}">${page.html}</article>`));
+      for (const [index, token] of tokens.entries()) {
+        if (!page.markdown.includes(`**${token}**`)) continue;
+        assert.ok(page.publicMarkdown.includes(`**${token}**`));
+        assert.ok(page.html.includes(`<strong>${lang === 'en' ? token : labels[index]}</strong>`));
+        if (lang === 'zh-CN') assert.ok(!page.html.includes(`<strong>${token}</strong>`));
+      }
+    }
+    const quick = pages.find(p => p.slug === '01-quick-start');
+    assert.ok(quick.summary.startsWith(lang === 'en' ? 'Reader question:' : '读者问题：'));
+    assert.ok(!quick.summary.includes('**'));
+    const canonical = await read(`docs/${lang}/01-quick-start.md`);
+    for (const token of tokens) assert.ok(canonical.includes(`**${token}**`));
+    for (const label of labels) assert.ok(!pages.find(p => p.slug === '01-quick-start').publicMarkdown.includes(`**${label}**`));
+  }
+});

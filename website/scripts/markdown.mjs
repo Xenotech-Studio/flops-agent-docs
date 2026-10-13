@@ -83,8 +83,22 @@ export function renderMarkdown(source, lang = 'en') {
     }
     let paragraph = lines[i++];
     while (i < lines.length && lines[i].trim() && !special(lines[i])) paragraph += '\n' + lines[i++];
-    if (!summary) summary = paragraph.replace(/\s+/g, ' ').slice(0, 200);
-    html += `<p>${inline(paragraph)}</p>`;
+    let summaryText = paragraph;
+    let rendered = `<p>${inline(paragraph)}</p>`;
+    // Metadata is identified by an exact paragraph-leading strong label.
+    // Existing documents place Outcome in the Prerequisites paragraph.
+    if (rendered.startsWith('<p><strong>Prerequisites:</strong>')) {
+      summaryText = summaryText.replace('**Outcome:**', () => dictionary[lang]['Outcome:']);
+      rendered = rendered.replace('<strong>Outcome:</strong>',
+        () => `<strong>${escape(dictionary[lang]['Outcome:'])}</strong>`);
+    }
+    rendered = rendered.replace(/^<p><strong>(Reader question:|Prerequisites:|Outcome:)<\/strong>/,
+      (_, label) => {
+        summaryText = summaryText.replace(`**${label}**`, () => dictionary[lang][label]);
+        return `<p><strong>${escape(dictionary[lang][label])}</strong>`;
+      });
+    if (!summary) summary = summaryText.replace(/\s+/g, ' ').slice(0, 200);
+    html += rendered;
   }
   return { html, headings, summary };
 }

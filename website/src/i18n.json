@@ -47,7 +47,10 @@
     "switch to": "switch to",
     "Copy code": "Copy code",
     "Copy failed; select the text manually": "Copy failed; select the text manually",
-    "暂无中文": "暂无中文"
+    "暂无中文": "暂无中文",
+    "Reader question:": "Reader question:",
+    "Prerequisites:": "Prerequisites:",
+    "Outcome:": "Outcome:"
   },
   "zh-CN": {
     "Skip to content": "跳至正文",
@@ -97,6 +100,9 @@
     "switch to": "切换为",
     "Copy code": "复制代码",
     "Copy failed; select the text manually": "复制失败，请手动选择文本",
-    "暂无中文": "暂无中文"
+    "暂无中文": "暂无中文",
+    "Reader question:": "读者问题：",
+    "Prerequisites:": "前置条件：",
+    "Outcome:": "预期结果："
   }
 }

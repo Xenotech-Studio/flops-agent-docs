@@ -13,7 +13,9 @@ for (const page of [...en, ...zh]) {
     <link rel="alternate" hreflang="en" href="${origin}${english.href}" />
     ${chinese ? `<link rel="alternate" hreflang="zh-CN" href="${origin}${chinese.href}" />` : ''}
     <link rel="alternate" hreflang="x-default" href="${origin}${english.href}" />`;
-  const html = template.replace('<html lang="en">', `<html lang="${page.lang}">`)
+  // Share the exact article HTML consumed by Docs.tsx on client navigation.
+  const article = `<main id="docs-content" class="docs-main"><article class="docs-prose" lang="${page.lang}">${page.html}</article></main>`;
+  const html = template.replace('<div id="root"></div>', () => `<div id="root">${article}</div>`).replace('<html lang="en">', `<html lang="${page.lang}">`)
     .replace(/<title>.*?<\/title>/s, `<title>${escape(page.title)} · flops-agent</title>`)
     .replace(/<link rel="canonical"[^>]*>/, links)
     .replace(/(<meta\s+name="description"\s+content=")[^"]*/, `$1${escape(page.summary)}`)
