@@ -52,14 +52,6 @@ const quickStartLines = new Map([
     "            print(\"模型回复：\", event.text, sep=\"\")"
   ],
   [
-    "    # Memory updates run in the background; wait for the write before reading.",
-    "    # 记忆更新在后台调度，等写入完成后再读取。"
-  ],
-  [
-    "    print(\"Memory: \", memory.notes, sep=\"\")",
-    "    print(\"记忆：\", memory.notes, sep=\"\")"
-  ],
-  [
     "Tool result: The delivery fee for Shanghai is 6 CNY",
     "工具结果：上海的配送费是 6 元"
   ],
@@ -67,10 +59,6 @@ const quickStartLines = new Map([
     "Model reply: Result: The delivery fee for Shanghai is 6 CNY",
     "模型回复：查询结果：上海的配送费是 6 元"
   ],
-  [
-    "Memory: ['Please check the delivery fee for Shanghai']",
-    "记忆：['请查一下上海的配送费']"
-  ]
 ]);
 const localizedQuickStartBlocks = text => blocks(text).map(block =>
   block.split('\n').map(line => quickStartLines.get(line) ?? line).join('\n'));
@@ -109,7 +97,7 @@ test('quick-start translation allowance rejects code and output drift', async ()
   for (const [before, after] of [
     ['tools=[delivery_fee]', 'tools=[]'],
     ['kwargs["messages"]', 'kwargs["message"]'],
-    ['timeout=5', 'timeout=50'],
+    ['agent=Agent()', 'agent=None'],
     ['index=0', 'index=1'],
     ['上海的配送费是 6 元', '上海的配送费是 8 元'],
   ]) {
@@ -117,10 +105,12 @@ test('quick-start translation allowance rejects code and output drift', async ()
     assert.notDeepEqual(blocks(translated.replace(before, after)), expected);
   }
   // English changes outside the approved translations must also be detected.
-  assert.notDeepEqual(localizedQuickStartBlocks(original.replace('timeout=5', 'timeout=50')), blocks(translated));
+  assert.notDeepEqual(localizedQuickStartBlocks(original.replace('agent=Agent()', 'agent=None')), blocks(translated));
 });
 test('localized navigation, links, anchors and exports', async () => {
-  assert.equal(zh.length, 17);
+  assert.equal(zh.length, 18);
+  assert.deepEqual(zh.map(p => p.slug), entries.map(e => e.slug));
+  assert.deepEqual(en.map(p => p.slug), entries.map(e => e.slug));
   const targets = new Map(zh.map(p => [p.href, p]));
   for (const page of zh) {
     assert.equal(page.lang, 'zh-CN');

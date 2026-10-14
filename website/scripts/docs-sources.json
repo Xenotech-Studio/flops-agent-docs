@@ -18,7 +18,8 @@
       "docs-run-the-offline-example": "Try it",
       "docs-install-and-call-a-real-model": "Next steps",
       "docs-turn-the-script-into-a-service": "Next steps",
-      "docs-the-first-common-mistake": "Boundaries"
+      "docs-the-first-common-mistake": "Boundaries",
+      "docs-understand-what-happened": "Try it"
     }
   },
   {
@@ -95,6 +96,14 @@
   {
     "file": "context-window.md",
     "slug": "context-window",
+    "group": "Save and recover",
+    "section": "learn",
+    "lang": "en",
+    "heading_aliases": {}
+  },
+  {
+    "file": "long-term-memory.md",
+    "slug": "long-term-memory",
     "group": "Save and recover",
     "section": "learn",
     "lang": "en",
