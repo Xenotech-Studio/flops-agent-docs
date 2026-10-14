@@ -250,7 +250,7 @@ def build_runtime():
 
 ## 下一步
 
-下一步，阅读[断线后继续接收结果](03-streaming-and-sse.md)。将验证过的 LLM 模块注入产品长期持有的 Runtime，再把运行输出接到客户端订阅。
+下一步，阅读[用 Session 和 Run 进行工作调度](03-streaming-and-sse.md)。借助产品长期持有的 Runtime 启动工作、离开，再回来收取结果。
 
 如果你想直接去看：
 

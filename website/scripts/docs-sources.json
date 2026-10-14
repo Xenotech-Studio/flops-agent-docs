@@ -50,10 +50,13 @@
     "section": "learn",
     "lang": "en",
     "heading_aliases": {
-      "docs-events-handle-meaning-before-bytes": "First connection: start, then subscribe",
-      "docs-standard-sse-the-endpoint-is-a-small-bridge": "First connection: start, then subscribe",
-      "docs-replay-and-live-delivery": "Check the result",
-      "docs-change-the-wire-at-the-codec-boundary": "Boundaries"
+      "docs-events-handle-meaning-before-bytes": "Two concepts for scheduling work",
+      "docs-standard-sse-the-endpoint-is-a-small-bridge": "Connect it to a product (HTTP + SSE)",
+      "docs-replay-and-live-delivery": "Understand what just happened",
+      "docs-change-the-wire-at-the-codec-boundary": "Boundaries",
+      "docs-first-connection-start-then-subscribe": "Start a task, then step away",
+      "docs-reconnect-with-the-server-cursor": "Come back for the result",
+      "docs-check-the-result": "Understand what just happened"
     }
   },
   {
