@@ -29,10 +29,10 @@
     "section": "learn",
     "lang": "en",
     "heading_aliases": {
-      "docs-six-names-to-remember": "Start with four objects",
+      "docs-six-names-to-remember": "The question enters a conversation",
       "docs-the-smallest-service-lifecycle": "Try it: two turns in one conversation",
-      "docs-how-one-run-advances": "Follow the execution timeline",
-      "docs-who-owns-each-layer": "Start with four objects"
+      "docs-how-one-run-advances": "The model answers and calls tools when needed",
+      "docs-who-owns-each-layer": "The question enters a conversation"
     }
   },
   {

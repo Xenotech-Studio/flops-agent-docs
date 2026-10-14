@@ -18,7 +18,7 @@ flops-agent is a Python framework for embedding an agent runtime in your backend
 
 ## Start here
 
-Run the offline example in [Run a task in five minutes](01-quick-start.md) to observe tool calls and memory output without an API key. Then read [Understand how a task runs](02-core-concepts.md) to learn how Runtime, Session, Query, and runs fit together before connecting a business tool of your own. For interface details, go to [Reference](reference.md).
+Run the offline example in [Run a task in five minutes](01-quick-start.md) to observe tool calls and memory output without an API key. Then read [How a user question is answered](02-core-concepts.md) to learn how Runtime, Session, Query, and runs fit together before connecting a business tool of your own. For interface details, go to [Reference](reference.md).
 
 ## Boundaries
 

@@ -15,7 +15,7 @@
 | Runner | 推进执行的步骤与策略 | Agent 身份配置 |
 | Agent | 身份、指令、模型偏好和记忆配置 | 运行池或基础设施 |
 
-教程：[理解任务如何运行](02-core-concepts.md)。代码：`src/flops_agent/engine/runtime.py:105`、`src/flops_agent/entities/query.py:37`、`src/flops_agent/entities/agent.py:39`。
+教程：[系统如何完成一轮用户提问的响应](02-core-concepts.md)。代码：`src/flops_agent/engine/runtime.py:105`、`src/flops_agent/entities/query.py:37`、`src/flops_agent/entities/agent.py:39`。
 
 ## 输出与控制
 

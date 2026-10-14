@@ -130,7 +130,93 @@ def build_llm_client() -> LLMStreamClient:
     raise ValueError("Unsupported MODEL_PROVIDER")
 ```
 
-工厂在应用组装时选择一次客户端，不会自动按请求切换供应商。如果需要每次请求选择不同供应商或模型，在你自己的 `acompletion` 中读取请求的 `model`，按产品映射选择客户端，再原样传递请求；不要为并发请求改写共享客户端的默认配置。本例只实现上面的两个工厂分支。
+工厂在应用组装时选择一次客户端，不会自动按请求切换供应商。它只实现上面的两个分支。下一节演示一种可选的逐请求路由方式。
+
+## 服务多用户时：让客户端无状态
+
+上一节的工厂在**启动时**选择客户端：这种进程级选型，对单用户、单模型工具已经够用。当一个服务要处理不同用户、不同模型的请求时，把每个用户的模型、密钥和执行中的状态都放到共享客户端上，会让它越来越难以安全复用。
+
+另一种做法是**请求级路由**：客户端不保存任何一次请求的状态。模型名和凭证随每次 `acompletion(**kw)` 调用传入，只放在局部变量里。路由器仍可持有稳定配置和可复用的底层客户端；这里的“无状态”指它不记住当前用户的请求。这样，一个客户端就能服务不同用户和模型，应用也能构造一次 Runtime 并持续复用。不要在调用之间改写共享默认值。
+
+将这个独立的离线示例保存为 `request_routing.py`，在安装了 `flops-agent==0.2.0` 的环境中运行 `python request_routing.py`。`RouterClient` 按 `model` 的前缀选择两个模拟客户端之一，再把剩余模型名和本次凭证传下去。前缀是应用自己的约定，不是框架内置的路由功能。两个请求共享同一个路由器和 Runtime，并发执行；下面的 key 只是假的测试值，不是真实凭证。
+
+```python
+import asyncio
+from collections.abc import AsyncIterator
+from flops_agent import (
+    Error, LLMStreamClient, Query, Runner, Runtime, Session,
+    StreamChunk, TextDelta, TextStreamChunk,
+)
+
+class DemoClient:
+    def __init__(self, label: str):
+        self.label = label
+
+    async def acompletion(self, **kw: object) -> AsyncIterator[StreamChunk]:
+        model, api_key = kw["model"], kw["api_key"]
+
+        async def stream() -> AsyncIterator[StreamChunk]:
+            await asyncio.sleep(0)
+            assert api_key == f"demo-only-{self.label}"
+            yield TextStreamChunk(text=f"{self.label}: {model}")
+
+        return stream()
+
+class RouterClient:
+    def __init__(self):
+        self.clients = {"fast": DemoClient("A"), "careful": DemoClient("B")}
+
+    async def acompletion(self, **kw: object) -> AsyncIterator[StreamChunk]:
+        route, separator, model = str(kw["model"]).partition("/")
+        if not separator or not model or route not in self.clients:
+            raise ValueError("Unknown model route")
+        request = dict(kw)
+        request["model"] = model
+        return await self.clients[route].acompletion(**request)
+
+class RoutedRunner(Runner):
+    async def build_request(self):
+        request = await super().build_request()
+        request.update(model=self.context["model"], api_key=self.context["api_key"])
+        return request
+
+async def main():
+    client = RouterClient()
+    assert isinstance(client, LLMStreamClient)
+    runtime = Runtime(llm=client, runner=RoutedRunner)
+
+    async def reply(session_id, model, api_key):
+        run = runtime.start(
+            Session(session_id), Query.text("Hello"),
+            context={"model": model, "api_key": api_key},
+        )
+        parts = []
+        async for delivery in run:
+            event = delivery.event
+            if isinstance(event, Error):
+                raise RuntimeError(event.message)
+            if isinstance(event, TextDelta):
+                parts.append(event.text)
+        return "".join(parts)
+
+    results = await asyncio.gather(
+        reply("one", "fast/small", "demo-only-A"),
+        reply("two", "careful/large", "demo-only-B"),
+    )
+    assert results == ["A: small", "B: large"]
+    print(*results, sep="\n")
+
+asyncio.run(main())
+```
+
+```text
+A: small
+B: large
+```
+
+`RoutedRunner` 将每次运行的 `context` 接到补全参数上；`Runtime.start()` 接受这个 context，`Runtime.ask()` 则没有逐请求的 model 参数。每个模拟客户端会在让出执行权后检查本次收到的假 key，因此这个例子也能发现这两个并发调用之间的凭证混用。真实应用由可信的应用层选择允许的模型、取得对应凭证，再由底层适配器用凭证做认证，不把它放进消息或日志。前面使用构造参数固定凭证的客户端，需要先做这层适配才能接受逐请求凭证。
+
+**单用户／单模型 → 工厂足够；多用户／多模型 → 无请求状态的客户端 + 请求级参数。**两种做法可以共存：启动时由工厂构造路由器，每次调用时再由路由器选目标。下一节继续前面的简单工厂接入流程；这个独立的路由示例是可选进阶。
 
 ## 接进你的应用
 
@@ -156,11 +242,11 @@ def build_runtime():
 
 ## 边界
 
-密钥和配置由产品提供，框架不管理密钥，也不替你发现凭据。不要把密钥写入源码。示例地址是占位地址；本页示例需要你自己的 key 和可用端点才能真调用。在没有真实 key 的环境下，只能验证构造、协议适配和本地模拟调用，不能据此认定真实供应商已验证。
+密钥和配置由产品提供，框架不管理密钥，也不替你发现凭据。不要把密钥写入源码。示例地址是占位地址；真实调用需要你自己的 key 和可用端点。在没有真实 key 的环境下，只能验证构造、协议适配和本地模拟调用，不能据此认定真实供应商已验证。
 
 本例客户端不会自动重试或降级。供应商重试、降级与路由策略由产品实现；0.2.0 另外提供可选的 `Runtime.llm_stream_retry`，用于流调用失败时重发当前步骤，默认关闭。它不提供跨供应商降级，也不替代客户端的供应商策略。避免在两层重复重试，流已输出后的重试还需处理重复内容。
 
-上面的工厂是本例全部的供应商选择逻辑，框架不内置多供应商路由。自定义接口只演示文本与工具调用；推理、结束原因或用量等字段还需按供应商实际返回的内容适配。工具的执行与授权仍由产品负责。
+上面的工厂和可选路由器都是应用自行定义的供应商选择逻辑，框架不内置多供应商路由。自定义接口只演示文本与工具调用；推理、结束原因或用量等字段还需按供应商实际返回的内容适配。工具的执行与授权仍由产品负责。
 
 ## 下一步
 
@@ -180,3 +266,4 @@ def build_runtime():
 - `flops_agent/entities/events.py:37`、`:179`：`TextDelta` 与 `Error` 运行事件。
 - `flops_agent/engine/runtime.py:147`、`:1218`：客户端与模型注入、可选重试配置及 `ask()` 事件输出。
 - `flops_agent/engine/runner.py:392`：可选重试的执行位置与取消异常传播。
+- `flops_agent/engine/runtime.py:1041`、`flops_agent/engine/runner.py:1038`：路由示例使用的每次运行 context 与补全请求构造。

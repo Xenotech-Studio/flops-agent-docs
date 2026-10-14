@@ -18,7 +18,7 @@ Flops Agent 是一个用 Python 编写、可嵌入业务服务的 agent 运行�
 
 ## 从这里开始
 
-先运行[五分钟运行一个任务](01-quick-start.md)中的离线示例，无需 API key 即可观察工具调用和记忆输出。随后阅读[理解任务如何运行](02-core-concepts.md)，了解 Runtime、Session、Query 和运行之间的关系，再接入一个自己的业务工具。需要查接口时，前往[参考](reference.md)。
+先运行[五分钟运行一个任务](01-quick-start.md)中的离线示例，无需 API key 即可观察工具调用和记忆输出。随后阅读[系统如何完成一轮用户提问的响应](02-core-concepts.md)，了解 Runtime、Session、Query 和运行之间的关系，再接入一个自己的业务工具。需要查接口时，前往[参考](reference.md)。
 
 ## 边界与限制
 
