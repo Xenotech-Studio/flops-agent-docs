@@ -28,23 +28,19 @@ Flops Agent 是一个用 Python 编写、可嵌入业务服务的 agent 运行�
 
 ## 继续阅读
 
-### 构建服务
+下一步，阅读[构建第一个应用](01-quick-start.md)。用离线示例跑通一次模型与工具的交互，把框架能力对应到可运行的代码。
 
-- [接入自己的模型](connect-model.md)
-- [断线后继续接收结果](03-streaming-and-sse.md)
-- [停止任务并接收用户输入](05-cancellation-and-suspension.md)
+如果你想直接去看：
 
-### 保存与恢复
-
-- [保存并继续会话](04-sessions-and-persistence.md)
-- [进程重启后恢复任务](06-recovery.md)
-- [控制长对话中的模型输入](context-window.md)
-
-### 扩展与集成
-
-- [为智能体添加工具](07-extending.md)
-- [在合适的扩展点实现产品策略](customize-runner.md)
-- [将示例集成到产品](08-worked-example.md)
+- [接入自己的模型](connect-model.md) —— 替换示例中的模型客户端与模型配置。
+- [断线后继续接收结果](03-streaming-and-sse.md) —— 接入客户端订阅与重连。
+- [停止任务并接收用户输入](05-cancellation-and-suspension.md) —— 处理停止、挂起与追加输入。
+- [保存并继续会话](04-sessions-and-persistence.md) —— 接入会话与运行记录的持久化。
+- [进程重启后恢复任务](06-recovery.md) —— 补齐恢复前提与验证步骤。
+- [控制长对话中的模型输入](context-window.md) —— 配置历史投影与摘要。
+- [为智能体添加工具](07-extending.md) —— 注册业务函数并验证调用结果。
+- [在合适的扩展点实现产品策略](customize-runner.md) —— 选择工具门控等策略入口。
+- [将示例集成到产品](08-worked-example.md) —— 补齐请求路径并检查集成结果。
 
 ### 细节：职责划分
 

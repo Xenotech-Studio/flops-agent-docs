@@ -47,7 +47,11 @@ RunStore 的调度记录，以及 ToolContext 的 record_dispatch 和 resume_of�
 
 ## 下一步
 
-恢复正常工作后，再考虑[长对话输入](context-window.md)。存储的具体能力参见 [API 契约](api_surface.md)。
+下一步，阅读[控制长对话中的模型输入](context-window.md)。会话能持续保存和恢复后，需要为不断增长的历史安排模型输入预算。
+
+如果你想直接去看：
+
+- [API 契约](api_surface.md) —— 核查存储接口的具体能力。
 
 ## 代码依据
 

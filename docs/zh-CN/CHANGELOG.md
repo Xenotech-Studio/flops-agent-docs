@@ -40,3 +40,6 @@
 
 [Unreleased]: https://github.com/Xenotech-Studio/flops-agent/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/Xenotech-Studio/flops-agent/releases/tag/v0.2.0
+## 继续阅读
+
+你已读到这条阅读路径的末尾。确认发布版本后，可返回[学习入口](README.md)实践完整流程，或回到[参考入口](reference.md)查阅接口与限制。

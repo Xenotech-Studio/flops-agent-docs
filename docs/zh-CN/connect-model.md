@@ -46,7 +46,11 @@ asyncio.run(main())
 
 ## 下一步
 
-将验证过的客户端注入产品长期持有的 Runtime，再接入[客户端订阅](03-streaming-and-sse.md)。遇到故障时，查阅[错误与限制](errors-and-limits.md)。
+下一步，阅读[断线后继续接收结果](03-streaming-and-sse.md)。将验证过的模型客户端注入产品长期持有的 Runtime，再把运行输出接到客户端订阅。
+
+如果你想直接去看：
+
+- [错误与限制](errors-and-limits.md) —— 排查配置和运行故障。
 
 ## 代码依据
 

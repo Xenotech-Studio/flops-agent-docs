@@ -115,7 +115,13 @@ Runner 将工具结果写回会话，再调用 `llm` 生成回复，对应第二
 
 ## 接下来可以做什么
 
-阅读[接入自己的模型](connect-model.md)，替换 `llm` 与 `model`；阅读[保存并继续会话](04-sessions-and-persistence.md)，接入持久化存储。想添加业务工具，阅读[为智能体添加工具](07-extending.md)；想进一步理解 Runtime、Session、Query 和 Run，阅读[理解任务如何运行](02-core-concepts.md)。
+下一步，阅读[理解任务如何运行](02-core-concepts.md)。沿着刚才的示例，理清 Runtime、Session、Query 和 Run 的关系，为后续接入服务打好基础。
+
+如果你想直接去看：
+
+- [接入自己的模型](connect-model.md) —— 替换 `llm` 与 `model`。
+- [保存并继续会话](04-sessions-and-persistence.md) —— 接入持久化存储。
+- [为智能体添加工具](07-extending.md) —— 接入自己的业务工具。
 
 ## 边界
 

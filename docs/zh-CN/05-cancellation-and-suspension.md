@@ -61,7 +61,7 @@ Runtime 的参数是 **when**。底层 Inbox 的 push 参数名为 deliver。默
 
 ## 下一步
 
-交互状态必须跨请求保留。继续阅读[保存会话](04-sessions-and-persistence.md)。
+下一步，阅读[保存并继续会话](04-sessions-and-persistence.md)。交互状态需要跨请求保留，将会话与运行记录接入合适的存储后端。
 
 ## 代码依据
 

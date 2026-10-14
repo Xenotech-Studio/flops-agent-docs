@@ -44,7 +44,12 @@ class ProductRunner(Runner):
 
 ## 下一步
 
-要添加工具，继续阅读[工具演练](07-extending.md)。要自定义其他运行时策略，参见[选择扩展点](customize-runner.md)。
+下一步，阅读[接入长期记忆](long-term-memory.md)。控制当前请求的历史输入后，进一步区分会话历史与可复用记忆，了解记忆的读取和维护时机。
+
+如果你想直接去看：
+
+- [为智能体添加工具](07-extending.md) —— 接入业务函数并验证工具调用。
+- [选择扩展点](customize-runner.md) —— 自定义其他运行时策略。
 
 ## 代码依据
 

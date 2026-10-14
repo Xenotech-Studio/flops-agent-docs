@@ -51,7 +51,11 @@ async def reconnect(runtime, run_id: str, last_cursor: int):
 
 ## 下一步
 
-接入停止按钮，然后决定[如何保存对话与日志](04-sessions-and-persistence.md)。
+下一步，阅读[停止任务并接收用户输入](05-cancellation-and-suspension.md)。订阅与执行彼此独立，接下来为仍在运行的任务接入停止、交互回答和追加输入。
+
+如果你想直接去看：
+
+- [保存并继续会话](04-sessions-and-persistence.md) —— 决定如何保存对话与运行日志。
 
 ## 代码依据
 

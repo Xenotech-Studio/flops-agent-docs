@@ -43,7 +43,11 @@ Memory 定义 `async recall(session, *, query=None)` 和 `async remember(session
 
 ## 下一步
 
-按照[产品集成清单](08-worked-example.md)连接各个边界。精确签名参见 [API 契约](api_surface.md)。
+下一步，阅读[将示例集成到产品](08-worked-example.md)。把选好的扩展点接入完整请求路径，并用产品集成清单验证各个边界。
+
+如果你想直接去看：
+
+- [API 契约](api_surface.md) —— 查阅接口的精确签名。
 
 ## 代码依据
 
