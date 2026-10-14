@@ -18,19 +18,14 @@ pip install "flops-agent[providers]==0.2.0"
 
 ## 搭建你的应用
 
-Runtime 组装应用，Runner 驱动模型与工具循环。先用内存存储跑通，再按需求替换；Agent 配置角色与指令。
+Runtime 把应用需要的模型客户端、工具、存储和执行端组装起来。本教程先用包内的内存存储、本地执行端和下面的脚本替身跑通流程。看到回复后，再按需要逐个替换。
 
-| 接缝 / 配置与职责 | 这里用什么 | 真实产品里用什么 |
-| --- | --- | --- |
-| `agent`：角色与指令 | `Agent()` | 配置名称与指令的 Agent |
-| `llm`：模型请求与流式回复 | `PseudoLLMStreamClient`，脚本替身 | 模型客户端，如 `OpenAIStreamClient` |
-| `tools`：模型可调用的业务能力 | `get_weather`，演示天气查询 | 你的业务工具 |
-| `database`：保存会话及消息 | `InMemoryDatabase`，进程内存 | 你选的持久化后端 |
-| `run_store`：保存运行日志与状态 | `InMemoryRunStore`，进程内存 | 实现 RunStore 接口的持久化后端 |
-| `executor`：实际执行工具调用 | 包内 `DefaultToolExecutor`，本地执行端 | 按部署需要保留，或换成远程执行端适配器 |
-| `memory`：可选的产品层接缝 | 未接入（默认 `None`） | 产品层定义召回与维护，可后接，见[接入长期记忆](long-term-memory.md) |
-| `runner`：驱动循环 | 包内 `Runner` | 保留，或用子类定制产品策略 |
-| `model`：传给模型客户端的模型名 | `"scripted-model"`，占位名称 | 服务商支持的模型名 |
+这篇你会碰到其中四块：
+
+- `llm` → `PseudoLLMStreamClient`（脚本替身；换真实模型见[接入自己的模型](connect-model.md)）
+- `tools` → `get_weather`（你的业务工具；扩展示例见[为智能体添加工具](07-extending.md)）
+- `database / run_store` → 内存实现（换持久化见[保存并继续会话](04-sessions-and-persistence.md)）
+- `memory` → 未接入（可选；见[接入长期记忆](long-term-memory.md)）
 
 新建 `app.py`，按顺序写入下面三段代码。第一段声明业务工具和模型替身；替身先请求工具，再根据工具结果生成回复。
 
@@ -115,7 +110,7 @@ Runner 将工具结果写回会话，再调用 `llm` 生成回复，对应第二
 
 ## 接下来可以做什么
 
-下一步，阅读[理解任务如何运行](02-core-concepts.md)。沿着刚才的示例，理清 Runtime、Session、Query 和 Run 的关系，为后续接入服务打好基础。
+下一步，阅读[系统如何完成一轮用户提问的响应](02-core-concepts.md)。沿着刚才的示例，理清 Runtime、Session、Query 和 Run 的关系，为后续接入服务打好基础。
 
 如果你想直接去看：
 
