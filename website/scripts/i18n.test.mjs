@@ -24,16 +24,24 @@ const shape = text => prose(text).split('\n').flatMap(line => {
 // code differences; every other page still uses byte-for-byte block comparison.
 const quickStartLines = new Map([
   [
-    "    \"\"\"Look up the status of a record.\"\"\"",
-    "    \"\"\"查询记录的状态。\"\"\""
+    "    \"\"\"Look up the weather for a city.\"\"\"",
+    "    \"\"\"查询城市天气。\"\"\""
+  ],
+  [
+    "    return f\"{city}: sunny\"",
+    "    return f\"{city}：晴\""
   ],
   [
     "                yield TextStreamChunk(text=f\"Result: {last['content']}\")",
     "                yield TextStreamChunk(text=f\"查询结果：{last['content']}\")"
   ],
   [
-    "    run = runtime.start(session, Query.text(\"Please check the status of record-1\"))",
-    "    run = runtime.start(session, Query.text(\"请查询 record-1 的状态\"))"
+    "                    arguments_delta='{\"city\": \"Asgard\"}',",
+    "                    arguments_delta='{\"city\": \"阿斯加德\"}',"
+  ],
+  [
+    "    run = runtime.start(session, Query.text(\"Please check the weather in Asgard\"))",
+    "    run = runtime.start(session, Query.text(\"请查询阿斯加德的天气\"))"
   ],
   [
     "            print(\"Tool result: \", event.result, sep=\"\")",
@@ -44,12 +52,12 @@ const quickStartLines = new Map([
     "            print(\"模型回复：\", event.text, sep=\"\")"
   ],
   [
-    "Tool result: ready",
-    "工具结果：ready"
+    "Tool result: Asgard: sunny",
+    "工具结果：阿斯加德：晴"
   ],
   [
-    "Model reply: Result: ready",
-    "模型回复：查询结果：ready"
+    "Model reply: Result: Asgard: sunny",
+    "模型回复：查询结果：阿斯加德：晴"
   ]
 ]);
 const localizedQuickStartBlocks = text => blocks(text).map(block =>
@@ -86,13 +94,13 @@ test('quick-start translation allowance rejects code and output drift', async ()
   assert.deepEqual(blocks(translated), expected);
   // Do not mask changes to API names, protocol keys, values, or printed results.
   for (const [before, after] of [
-    ['tools=[get_record_status]', 'tools=[]'],
+    ['tools=[get_weather]', 'tools=[]'],
     ['kwargs["messages"]', 'kwargs["message"]'],
     ['agent=Agent()', 'agent=None'],
     ['index=0', 'index=1'],
-    ['工具结果：ready', '工具结果：pending'],
-    ['"record_id": "record-1"', '"record_id": "record-2"'],
-    ['"record-1": "ready"', '"record-1": "pending"'],
+    ['工具结果：阿斯加德：晴', '工具结果：阿斯加德：雨'],
+    ['"city": "阿斯加德"', '"city": "其他城市"'],
+    ['return f"{city}：晴"', 'return f"{city}：雨"'],
   ]) {
     assert.ok(translated.includes(before));
     assert.notDeepEqual(blocks(translated.replace(before, after)), expected);
