@@ -24,24 +24,16 @@ const shape = text => prose(text).split('\n').flatMap(line => {
 // code differences; every other page still uses byte-for-byte block comparison.
 const quickStartLines = new Map([
   [
-    "    \"\"\"Look up the delivery fee for a city.\"\"\"",
-    "    \"\"\"查询城市的配送费。\"\"\""
-  ],
-  [
-    "    return f\"The delivery fee for {city} is 6 CNY\"",
-    "    return f\"{city}的配送费是 6 元\""
+    "    \"\"\"Look up the status of a record.\"\"\"",
+    "    \"\"\"查询记录的状态。\"\"\""
   ],
   [
     "                yield TextStreamChunk(text=f\"Result: {last['content']}\")",
     "                yield TextStreamChunk(text=f\"查询结果：{last['content']}\")"
   ],
   [
-    "                    arguments_delta='{\"city\": \"Shanghai\"}',",
-    "                    arguments_delta='{\"city\": \"上海\"}',"
-  ],
-  [
-    "    run = runtime.start(session, Query.text(\"Please check the delivery fee for Shanghai\"))",
-    "    run = runtime.start(session, Query.text(\"请查一下上海的配送费\"))"
+    "    run = runtime.start(session, Query.text(\"Please check the status of record-1\"))",
+    "    run = runtime.start(session, Query.text(\"请查询 record-1 的状态\"))"
   ],
   [
     "            print(\"Tool result: \", event.result, sep=\"\")",
@@ -52,18 +44,17 @@ const quickStartLines = new Map([
     "            print(\"模型回复：\", event.text, sep=\"\")"
   ],
   [
-    "Tool result: The delivery fee for Shanghai is 6 CNY",
-    "工具结果：上海的配送费是 6 元"
+    "Tool result: ready",
+    "工具结果：ready"
   ],
   [
-    "Model reply: Result: The delivery fee for Shanghai is 6 CNY",
-    "模型回复：查询结果：上海的配送费是 6 元"
-  ],
+    "Model reply: Result: ready",
+    "模型回复：查询结果：ready"
+  ]
 ]);
 const localizedQuickStartBlocks = text => blocks(text).map(block =>
   block.split('\n').map(line => quickStartLines.get(line) ?? line).join('\n'));
 const quickStartInline = new Map([
-  ['{"city": "Shanghai"}', '{"city": "上海"}'],
   ['Tool result', '「工具结果」'],
   ['Model reply', '「模型回复」'],
 ]);
@@ -95,11 +86,13 @@ test('quick-start translation allowance rejects code and output drift', async ()
   assert.deepEqual(blocks(translated), expected);
   // Do not mask changes to API names, protocol keys, values, or printed results.
   for (const [before, after] of [
-    ['tools=[delivery_fee]', 'tools=[]'],
+    ['tools=[get_record_status]', 'tools=[]'],
     ['kwargs["messages"]', 'kwargs["message"]'],
     ['agent=Agent()', 'agent=None'],
     ['index=0', 'index=1'],
-    ['上海的配送费是 6 元', '上海的配送费是 8 元'],
+    ['工具结果：ready', '工具结果：pending'],
+    ['"record_id": "record-1"', '"record_id": "record-2"'],
+    ['"record-1": "ready"', '"record-1": "pending"'],
   ]) {
     assert.ok(translated.includes(before));
     assert.notDeepEqual(blocks(translated.replace(before, after)), expected);

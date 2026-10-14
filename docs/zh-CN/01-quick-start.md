@@ -24,7 +24,7 @@ Runtime 组装应用，Runner 驱动模型与工具循环。先用内存存储�
 | --- | --- | --- |
 | `agent`：角色与指令 | `Agent()` | 配置名称与指令的 Agent |
 | `llm`：模型请求与流式回复 | `PseudoLLMStreamClient`，脚本替身 | 模型客户端，如 `OpenAIStreamClient` |
-| `tools`：模型可调用的业务能力 | `delivery_fee`，固定配送费 | 你的业务工具 |
+| `tools`：模型可调用的业务能力 | `get_record_status`，按 ID 查询记录状态 | 你的业务工具 |
 | `database`：保存会话及消息 | `InMemoryDatabase`，进程内存 | 你选的持久化后端 |
 | `run_store`：保存运行日志与状态 | `InMemoryRunStore`，进程内存 | 实现 RunStore 接口的持久化后端 |
 | `executor`：实际执行工具调用 | 包内 `DefaultToolExecutor`，本地执行端 | 按部署需要保留，或换成远程执行端适配器 |
@@ -43,9 +43,10 @@ from flops_agent import (
 from flops_agent.seams.executor import DefaultToolExecutor
 
 
-def delivery_fee(city: str) -> str:
-    """查询城市的配送费。"""
-    return f"{city}的配送费是 6 元"
+def get_record_status(record_id: str) -> str:
+    """查询记录的状态。"""
+    statuses = {"record-1": "ready", "record-2": "pending"}
+    return statuses.get(record_id, "unknown")
 
 
 class PseudoLLMStreamClient:
@@ -56,8 +57,8 @@ class PseudoLLMStreamClient:
                 yield TextStreamChunk(text=f"查询结果：{last['content']}")
             else:
                 yield ToolCallStreamChunk(
-                    index=0, id="fee-1", name="delivery_fee",
-                    arguments_delta='{"city": "上海"}',
+                    index=0, id="status-1", name="get_record_status",
+                    arguments_delta='{"record_id": "record-1"}',
                 )
         return stream()
 ```
@@ -68,7 +69,7 @@ class PseudoLLMStreamClient:
 def build_runtime():
     return Runtime(
         agent=Agent(),
-        llm=PseudoLLMStreamClient(), tools=[delivery_fee],
+        llm=PseudoLLMStreamClient(), tools=[get_record_status],
         database=InMemoryDatabase(), run_store=InMemoryRunStore(),
         executor=DefaultToolExecutor(), runner=Runner, model="scripted-model",
     )
@@ -84,7 +85,7 @@ def build_runtime():
 async def main():
     runtime = build_runtime()
     session = await runtime.load_session("my-first-app")
-    run = runtime.start(session, Query.text("请查一下上海的配送费"))
+    run = runtime.start(session, Query.text("请查询 record-1 的状态"))
     async for delivery in run:
         event = delivery.event
         if isinstance(event, ToolResult):
@@ -105,11 +106,11 @@ python app.py
 你会看到以下完整输出，来自 PyPI 的 `flops-agent==0.2.0`：
 
 ```text
-工具结果：上海的配送费是 6 元
-模型回复：查询结果：上海的配送费是 6 元
+工具结果：ready
+模型回复：查询结果：ready
 ```
 
-`load_session()` 加载或创建 Session，`Query.text()` 装入用户请求，`start()` 返回本次运行的 Run。Runner 调用模型替身，收到工具请求后交给执行端调用 `delivery_fee()`，第一行就是工具返回值。
+`load_session()` 加载或创建 Session，`Query.text()` 装入用户请求，`start()` 返回本次运行的 Run。Runner 调用模型替身，收到工具请求后交给执行端调用 `get_record_status()`，第一行就是工具返回值。
 
 Runner 将工具结果写回会话，再调用 `llm` 生成回复，对应第二行。入口通过 `async for` 消费本次运行的事件，分别处理工具结果与文本增量。`database` 保存会话，`run_store` 保存运行日志与状态，这两个接缝不单独打印一行。
 
@@ -119,7 +120,7 @@ Runner 将工具结果写回会话，再调用 `llm` 生成回复，对应第二
 
 ## 边界
 
-脚本替身固定查询上海，不理解用户输入，也不请求真实模型；配送费函数只返回固定费用。会话与运行记录只存在当前进程内，生产中需要按保留需求换成持久化实现。存储后端不会替你保留进程内的 Run 句柄，因此不要为每个流连接重建 Runtime。
+脚本替身固定查询 `record-1`，不理解用户输入，也不请求真实模型；状态查询函数只读取内置的演示数据，找不到记录时返回 `unknown`。会话与运行记录只存在当前进程内，生产中需要按保留需求换成持久化实现。存储后端不会替你保留进程内的 Run 句柄，因此不要为每个流连接重建 Runtime。
 
 ## 代码依据
 
